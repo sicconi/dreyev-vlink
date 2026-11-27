@@ -77,7 +77,23 @@ fun VehicleScreen(s: VehicleState, u: UnitPrefs, trail: List<Pair<Double, Double
                 Text(u.fmtTemp(s.ambientC?.value), color = if (s.ambientC == null) C.textFaint else C.text, fontFamily = NumberFont, fontSize = 34.sp, fontWeight = FontWeight.SemiBold)
                 Text("Ambient air temp", color = C.textFaint, fontSize = 11.sp)
             }
-            DashCard(Modifier.weight(1f)) {
+            if (s.isEv) DashCard(Modifier.weight(1f)) {
+                CardHeader("Drive state") { SourceBadge(s.engine, Source.MFR, "READY") }
+                val st = s.engine?.value
+                Text(
+                    when (st) { EngineState.ON -> "READY"; EngineState.OFF -> "OFF"; else -> "N/A" },
+                    color = when (st) { EngineState.ON -> C.greenText; EngineState.OFF -> C.textDim; else -> C.textFaint },
+                    fontFamily = NumberFont, fontSize = 30.sp, fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    listOfNotNull(
+                        s.socPct?.value?.let { "SOC %.0f%%".format(it) },
+                        s.hvVoltageV?.value?.let { "%.0f V".format(it) },
+                        s.hvPowerKw?.value?.let { "%.1f kW".format(it) },
+                    ).joinToString(" · ").ifEmpty { "Battery N/A" },
+                    color = C.textFaint, fontSize = 11.sp,
+                )
+            } else DashCard(Modifier.weight(1f)) {
                 CardHeader("Engine") { SourceBadge(s.engine, Source.OBD, "0C · 1F") }
                 val st = s.engine?.value
                 Text(

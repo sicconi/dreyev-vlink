@@ -60,7 +60,7 @@ object Vin {
         "WBA" to "BMW", "WBS" to "BMW", "5UX" to "BMW",
         "WDD" to "Mercedes-Benz", "WDC" to "Mercedes-Benz", "4JG" to "Mercedes-Benz",
         "WVW" to "Volkswagen", "3VW" to "Volkswagen", "WAU" to "Audi",
-        "KMH" to "Hyundai", "5NP" to "Hyundai", "KNA" to "Kia", "KND" to "Kia",
+        "KMH" to "Hyundai", "KM8" to "Hyundai", "5NP" to "Hyundai", "KNA" to "Kia", "KND" to "Kia",
         "5YJ" to "Tesla", "7SA" to "Tesla", "JF1" to "Subaru", "4S4" to "Subaru",
         "JM1" to "Mazda", "1C4" to "Jeep/Chrysler", "1C6" to "Ram", "2C3" to "Chrysler",
         "YV1" to "Volvo", "SAL" to "Land Rover", "ZFA" to "Fiat",

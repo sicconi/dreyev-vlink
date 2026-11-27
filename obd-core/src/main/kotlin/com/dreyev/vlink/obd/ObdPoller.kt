@@ -44,7 +44,7 @@ class ObdPoller(
         val vin = readVin()
         profile = pickProfile(vin)
         for (c in profile.initCommands) elm.command(c)
-        store.update { it.copy(profileName = profile.name) }
+        store.update { it.copy(profileName = profile.name, isEv = profile.isEv) }
         store.updateLink {
             it.copy(state = LinkState.CONNECTED, elmVersion = info.version, protocol = info.protocol, message = null)
         }
@@ -134,7 +134,7 @@ class ObdPoller(
                         )
                     }
                 }
-                is ObdResult.NoData -> store.update { it.copy(engine = Reading(EngineState.OFF, Source.OBD, "no ECU reply", t)) }
+                is ObdResult.NoData -> if (!profile.isEv) store.update { it.copy(engine = Reading(EngineState.OFF, Source.OBD, "no ECU reply", t)) }
                 is ObdResult.Failure -> Unit
             }
             r
@@ -169,14 +169,21 @@ class ObdPoller(
             } else ObdResult.NoData("no voltage")
         }
 
-        for (p in profile.pids) {
-            if (p.signal == MfrSignal.ODOMETER && StandardPids.ODOMETER in supported) continue
-            items += Item("MFR ${p.signal.id}", p.intervalMs) {
-                val r = elm.query(p.request, header = p.header, prefix = p.responsePrefix)
+        // One request per (module, PID): many signals often share a reply (e.g. all four TPMS corners).
+        val groups = profile.pids
+            .filterNot { it.signal == MfrSignal.ODOMETER && StandardPids.ODOMETER in supported }
+            .groupBy { Triple(it.header, it.request, it.responsePrefix) }
+        for ((key, pids) in groups) {
+            val (header, request, prefix) = key
+            items += Item("MFR ${header ?: ""} $request", pids.minOf { it.intervalMs }) {
+                val r = elm.query(request, header = header, prefix = prefix, timeoutMs = 2_000)
                 if (r is ObdResult.Data) {
-                    try {
-                        if (r.bytes.size >= p.formula.bytesNeeded) applyMfr(p, p.toMetric(p.formula.eval(r.bytes)), clock())
-                    } catch (e: Exception) { log("formula ${p.signal.id}: ${e.message}") }
+                    val t = clock()
+                    for (p in pids) {
+                        try {
+                            if (r.bytes.size >= p.formula.bytesNeeded) applyMfr(p, p.toMetric(p.formula.eval(r.bytes)), t)
+                        } catch (e: Exception) { log("formula ${p.signal.id}: ${e.message}") }
+                    }
                 }
                 r
             }
@@ -233,6 +240,28 @@ class ObdPoller(
                 it.copy(carAccel = Reading(Accel3(prev?.longG ?: Double.NaN, v, Double.NaN), Source.MFR, "ESC", t))
             }
             MfrSignal.ODOMETER -> store.update { it.copy(odometerKm = num()) }
+            MfrSignal.VEHICLE_SPEED -> {
+                val g = accel.add(v, t)
+                store.update {
+                    if (it.speedKmh?.source == Source.OBD && it.speedKmh.isFresh(t)) it
+                    else it.copy(speedKmh = num(), speedDerivedLongG = g?.let { x -> Reading(x, Source.EST, "Δ speed", t) } ?: it.speedDerivedLongG)
+                }
+            }
+            MfrSignal.AMBIENT_TEMP -> store.update { if (it.ambientC?.source == Source.OBD) it else it.copy(ambientC = num()) }
+            MfrSignal.ACCEL_PEDAL -> store.update { if (it.pedalPct?.source == Source.OBD && it.pedalPct.isFresh(t)) it else it.copy(pedalPct = num()) }
+            MfrSignal.READY -> store.update { it.copy(engine = Reading(if (v != 0.0) EngineState.ON else EngineState.OFF, Source.MFR, "READY", t)) }
+            MfrSignal.MOTOR_RPM_FRONT -> store.update { it.copy(motorRpmFront = num()) }
+            MfrSignal.MOTOR_RPM_REAR -> store.update { it.copy(motorRpmRear = num()) }
+            MfrSignal.BATTERY_SOC -> store.update { it.copy(socPct = num()) }
+            MfrSignal.BATTERY_CURRENT -> store.update { s ->
+                val p = s.hvVoltageV?.let { u -> Reading(u.value * v / 1000.0, Source.MFR, tag, t) }
+                s.copy(hvCurrentA = num(), hvPowerKw = p ?: s.hvPowerKw)
+            }
+            MfrSignal.BATTERY_VOLTAGE -> store.update { s ->
+                val p = s.hvCurrentA?.let { i -> Reading(i.value * v / 1000.0, Source.MFR, tag, t) }
+                s.copy(hvVoltageV = num(), hvPowerKw = p ?: s.hvPowerKw)
+            }
+            MfrSignal.AUX_BATTERY_VOLTAGE -> store.update { it.copy(batteryV = num()) }
         }
     }
 }

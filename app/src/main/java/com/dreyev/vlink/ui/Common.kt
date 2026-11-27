@@ -54,7 +54,11 @@ fun linkSubtitle(s: VehicleState): String = when (s.link.state) {
 
 @Composable
 fun EnginePill(s: VehicleState) {
-    when (s.engine?.value) {
+    if (s.isEv) when (s.engine?.value) {
+        EngineState.ON -> Pill("READY", C.greenText, C.greenBg)
+        EngineState.OFF -> Pill("OFF", C.textDim, C.track)
+        else -> Pill("READY N/A", C.textFaint, C.track)
+    } else when (s.engine?.value) {
         EngineState.ON -> Pill("ENGINE ON", C.greenText, C.greenBg)
         EngineState.OFF -> Pill("ENGINE OFF", C.textDim, C.track)
         else -> Pill("ENGINE N/A", C.textFaint, C.track)

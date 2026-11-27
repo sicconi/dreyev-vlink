@@ -49,9 +49,31 @@ Requires JDK 17+ and the Android SDK (platform 35).
 ./gradlew :app:recordPaparazziDebug          # render screens to app/src/test/snapshots/images
 ```
 
+## Hyundai Ioniq 5 (2022–2024)
+
+`app/src/main/assets/profiles/hyundai-ioniq5.json` is picked automatically from the VIN (or choose it in
+Settings). It uses community-published PIDs (Esprit1st/Hyundai-Ioniq-5-Torque-Pro-PIDs, built on
+JejuSoul/OBD-PIDs-for-HKMC-EVs), not yet verified on a car:
+
+| Signal | Module | Request | Formula |
+|---|---|---|---|
+| Tire pressure FL/FR/RL/RR | 7A0 (TPMS) | 22C00B | E/5, J/5, O/5, T/5 psi |
+| Tire temperature FL/FR/RL/RR | 7A0 | 22C00B | F-50, K-50, P-50, U-50 °C |
+| Steering angle | 730 | 22F010 | signed(N·256+M)/10 ° |
+| Vehicle speed, outside temp | 7B3 | 220100 | AD km/h, G/2-40 °C |
+| Odometer | 7C6 | 22B002 | G·65536+H·256+I km |
+| READY, HV current/voltage, motor RPM, 12 V | 7E4 (BMS) | 220101 | bit(AY,2), signed(K·256+L)/10 A, (M·256+N)/10 V, BB/BC, BD/BE, AD/10 |
+| State of charge | 7E4 | 220105 | AF/2 % |
+
+On an EV the big gauge's arc shows battery power (kW, green while regenerating), the engine-load gauge
+becomes battery SOC, and ENGINE ON/OFF becomes READY/OFF. Not in the published list: brake pressure
+and pedal, individual wheel speeds, turn signals, seatbelts and car-sensor acceleration, so those
+show N/A (G-force falls back to the phone). If steering reads left when turning right, flip the
+sign in the formula.
+
 ## Known limits
 
-* MFR signals depend on per-car PIDs; only a demo profile (for the simulator) ships today.
+* MFR signals depend on per-car PIDs; profiles ship for the simulator and the Hyundai Ioniq 5.
   Some newer cars block these requests with a security gateway.
 * TPMS sensors transmit every ~30–60 s while driving and rarely when parked; each tire card
   shows how old its reading is.

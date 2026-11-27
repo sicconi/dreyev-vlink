@@ -37,18 +37,49 @@ fun hero(s: VehicleState, u: UnitPrefs): Hero {
 
 fun brakePct(s: VehicleState, u: UnitPrefs): Double? = s.brakePressureBar?.value?.let { u.brakePressure(it) }
 
+/**
+ * Big speed gauge. Petrol/diesel: arc = engine RPM. Electric (EV profile): arc = battery
+ * power in kW, negative while regenerating, with SOC and motor RPM underneath.
+ */
+@Composable
+fun HeroGauge(s: VehicleState, u: UnitPrefs, size: androidx.compose.ui.unit.Dp) {
+    val h = hero(s, u)
+    val sp = s.speedKmh
+    val src = sp?.source ?: s.gps?.let { Source.PHONE }
+    val srcTag = if (sp != null) (if (sp.source == Source.OBD) "0D" else sp.tag) else "GPS"
+    if (s.isEv) {
+        val kw = s.hvPowerKw?.value
+        val sub = listOfNotNull(
+            kw?.let { String.format(Locale.US, "%.0f kW", it) },
+            s.socPct?.value?.let { String.format(Locale.US, "SOC %.0f%%", it) },
+            s.gps?.value?.speedKmh?.let { "GPS " + u.fmtSpeed(it, 1) },
+        ).joinToString(" · ").ifEmpty { "Power N/A" }
+        Gauge(
+            value = kw, size = size, label = "Speed · Power kW", unit = u.speedUnit, source = src, sourceTag = srcTag,
+            min = -100.0, max = 250.0, ticks = 7, color = if ((kw ?: 0.0) < 0) C.green else C.obd, display = h.speed, sub = sub, origin = 0.0,
+        )
+    } else {
+        Gauge(
+            value = h.rpmK, size = size, label = "Speed · RPM ×1000", unit = u.speedUnit, source = src,
+            sourceTag = if (s.speedKmh?.source == Source.OBD) "0D · 0C" else srcTag,
+            min = 0.0, max = 8.0, ticks = 8, redFrom = 6.5, display = h.speed, sub = h.sub,
+        )
+    }
+}
+
+/** Second small gauge: engine load, or battery state of charge on an EV. */
+@Composable
+fun LoadOrSocGauge(s: VehicleState, size: androidx.compose.ui.unit.Dp) {
+    if (s.isEv) Gauge(s.socPct?.value, size, "Battery SOC", "%", s.socPct?.source ?: Source.MFR, s.socPct?.tag ?: "", color = C.green)
+    else Gauge(s.engineLoadPct?.value, size, "Engine load", "%", s.engineLoadPct?.source, "04", redFrom = 90.0)
+}
+
 @Composable
 fun DriveScreen(s: VehicleState, u: UnitPrefs, now: Long) {
-    val h = hero(s, u)
     Column(Modifier.fillMaxWidth()) {
         // Hero gauge with turn signals and seatbelts around it
         Box(Modifier.fillMaxWidth().padding(top = 2.dp), contentAlignment = Alignment.TopCenter) {
-            Gauge(
-                value = h.rpmK, size = 240.dp, label = "Speed · RPM ×1000", unit = u.speedUnit,
-                source = if (s.speedKmh != null) Source.OBD else s.gps?.let { Source.PHONE },
-                sourceTag = if (s.speedKmh != null) "0D · 0C" else "GPS",
-                min = 0.0, max = 8.0, ticks = 8, redFrom = 6.5, display = h.speed, sub = h.sub,
-            )
+            HeroGauge(s, u, 240.dp)
             Column(Modifier.align(Alignment.TopStart).padding(start = 16.dp, top = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 TurnArrow(true, s.turnLeft?.value)
                 SrcText(s.turnLeft)
@@ -63,7 +94,7 @@ fun DriveScreen(s: VehicleState, u: UnitPrefs, now: Long) {
 
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
             Gauge(s.pedalPct?.value, 108.dp, "Gas pedal", "%", s.pedalPct?.source, s.pedalPct?.tag ?: "49")
-            Gauge(s.engineLoadPct?.value, 108.dp, "Engine load", "%", s.engineLoadPct?.source, "04", redFrom = 90.0)
+            LoadOrSocGauge(s, 108.dp)
             Gauge(
                 brakePct(s, u), 108.dp, "Brake press.", u.brakePressureUnit, s.brakePressureBar?.source ?: Source.MFR,
                 max = u.brakePressureMax, ticks = 8, color = C.red,

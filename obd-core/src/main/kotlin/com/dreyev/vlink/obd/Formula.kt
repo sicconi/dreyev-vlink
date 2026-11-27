@@ -19,7 +19,9 @@ class Formula(val text: String) {
     }
 
     /** Highest byte variable used (to check the reply is long enough). */
-    val bytesNeeded: Int = tokens.filter { it.length == 1 && it[0] in 'A'..'Z' }.maxOfOrNull { it[0] - 'A' + 1 } ?: 0
+    val bytesNeeded: Int = tokens.indices
+        .filter { i -> isByteVar(tokens[i]) && tokens.getOrNull(i + 1) != "(" }
+        .maxOfOrNull { byteIndex(tokens[it]) + 1 } ?: 0
 
     private class Parser(val t: List<String>, val bytes: IntArray) {
         var i = 0
@@ -60,8 +62,8 @@ class Formula(val text: String) {
                 tok == "(" -> expr().also { expect(")") }
                 tok.startsWith("0x", true) -> tok.substring(2).toLong(16).toDouble()
                 tok[0].isDigit() || tok[0] == '.' -> tok.toDouble()
-                tok.length == 1 && tok[0] in 'A'..'Z' -> {
-                    val idx = tok[0] - 'A'
+                isByteVar(tok) && peek() != "(" -> {
+                    val idx = byteIndex(tok)
                     require(idx < bytes.size) { "Reply too short for $tok" }
                     bytes[idx].toDouble()
                 }
@@ -75,7 +77,7 @@ class Formula(val text: String) {
             }
         }
         fun call(name: String, a: List<Double>): Double = when (name) {
-            "signed" -> { val bits = a[1].toInt(); val v = a[0].toLong(); val m = 1L shl (bits - 1); ((v xor m) - m).toDouble() }
+            "signed" -> { val bits = a.getOrNull(1)?.toInt() ?: 8; val v = a[0].toLong(); val m = 1L shl (bits - 1); ((v xor m) - m).toDouble() }
             "bit" -> ((a[0].toLong() shr a[1].toInt()) and 1L).toDouble()
             "min" -> minOf(a[0], a[1])
             "max" -> maxOf(a[0], a[1])
@@ -85,6 +87,14 @@ class Formula(val text: String) {
     }
 
     companion object {
+        /** Byte variables: A..Z, then AA..AZ, BA..BZ (Torque convention, case-insensitive). */
+        fun isByteVar(t: String) = t.length in 1..2 && t.all { it.isLetter() && it.uppercaseChar() in 'A'..'Z' }
+
+        fun byteIndex(t: String): Int {
+            val u = t.uppercase()
+            return if (u.length == 1) u[0] - 'A' else (u[0] - 'A' + 1) * 26 + (u[1] - 'A')
+        }
+
         fun tokenize(s: String): List<String> {
             val out = mutableListOf<String>()
             var i = 0

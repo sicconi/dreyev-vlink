@@ -17,7 +17,17 @@ enum class MfrSignal(val id: String) {
     TURN_LEFT("turnLeft"), TURN_RIGHT("turnRight"),                       // boolean
     BELT_DRIVER("seatbeltDriver"), BELT_PASSENGER("seatbeltPassenger"),   // boolean, non-zero = buckled
     ACCEL_LONG("accelLong"), ACCEL_LAT("accelLat"),                       // g (or m/s² with unit "m/s2")
-    ODOMETER("odometer");                                                 // km
+    ODOMETER("odometer"),                                                 // km
+    VEHICLE_SPEED("vehicleSpeed"),                                        // km/h (when PID 0D is missing)
+    AMBIENT_TEMP("ambientTemp"),                                          // °C (when PID 46 is missing)
+    ACCEL_PEDAL("accelPedal"),                                            // %
+    // Electric vehicles
+    READY("ready"),                                                       // boolean: car is on / ready to drive
+    MOTOR_RPM_FRONT("motorRpmFront"), MOTOR_RPM_REAR("motorRpmRear"),     // rpm
+    BATTERY_SOC("batterySoc"),                                            // % (dashboard SOC)
+    BATTERY_CURRENT("batteryCurrent"),                                    // A, + = discharging
+    BATTERY_VOLTAGE("batteryVoltage"),                                    // V
+    AUX_BATTERY_VOLTAGE("auxBatteryVoltage");                             // V (12 V battery)
 
     companion object {
         fun byId(id: String) = entries.firstOrNull { it.id.equals(id, true) }
@@ -40,7 +50,7 @@ data class MfrPid(
     val intervalMs: Long = 500,
 ) {
     fun toMetric(v: Double): Double = when (unit?.lowercase()) {
-        null, "", "bar", "kpa", "c", "°c", "km/h", "kmh", "deg", "g", "km", "bool" -> v
+        null, "", "bar", "kpa", "c", "°c", "km/h", "kmh", "deg", "g", "km", "bool", "%", "rpm", "a", "v" -> v
         "psi" -> if (signal.id.startsWith("tirePressure")) v / 0.1450377 else v / 14.50377
         "mbar" -> if (signal.id.startsWith("tirePressure")) v / 10.0 else v / 1000.0
         "f", "°f" -> (v - 32.0) * 5.0 / 9.0
@@ -71,7 +81,11 @@ data class ManufacturerProfile(
     val brakes: BrakeGeometry = BrakeGeometry(),
     /** Extra AT commands to send once after init, e.g. "ATSP6". */
     val initCommands: List<String> = emptyList(),
+    /** "ice" (default) or "ev". EV profiles show power, SOC and READY instead of RPM, load and ENGINE. */
+    val powertrain: String = "ice",
 ) {
+    val isEv get() = powertrain.equals("ev", true)
+
     fun matchesVin(vin: String?): Boolean = vin != null && wmi.any { vin.uppercase().startsWith(it.uppercase()) }
 
     companion object {
@@ -108,6 +122,7 @@ data class ManufacturerProfile(
                     b.optDouble("frontPistonAreaCm2", 25.5), b.optDouble("rearPistonAreaCm2", 11.3),
                 ),
                 initCommands = (0 until init.length()).map { init.getString(it) },
+                powertrain = o.optString("powertrain", "ice"),
             )
         }
     }

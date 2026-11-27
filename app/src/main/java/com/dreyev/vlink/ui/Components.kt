@@ -159,8 +159,11 @@ fun Gauge(
     display: String? = null,
     sub: String? = null,
     decimals: Int = 0,
+    /** Value the colored arc grows from (e.g. 0 kW on a power gauge with a regen range). */
+    origin: Double = min,
     modifier: Modifier = Modifier,
 ) {
+    val f0 = ((origin - min) / (max - min)).coerceIn(0.0, 1.0).toFloat()
     val f = if (value == null) 0f else ((value - min) / (max - min)).coerceIn(0.0, 1.0).toFloat()
     val shown = display ?: value?.let { com.dreyev.vlink.obd.UnitPrefs.fmt(it, decimals) } ?: "N/A"
     val h = size * 0.88f
@@ -168,7 +171,7 @@ fun Gauge(
         Box(Modifier.size(size, h)) {
             Canvas(Modifier.size(size, h)) {
                 val k = this.size.width / 100f
-                scale(k, k, pivot = Offset.Zero) { drawGaugeArc(f, ticks, redFrom?.let { ((it - min) / (max - min)).toFloat() }, color, value != null) }
+                scale(k, k, pivot = Offset.Zero) { drawGaugeArc(f, ticks, redFrom?.let { ((it - min) / (max - min)).toFloat() }, color, value != null, f0) }
             }
             Column(
                 Modifier.fillMaxWidth().padding(top = size * 0.36f),
@@ -204,11 +207,12 @@ private fun DrawScope.arc(a0: Float, sweep: Float, r: Float, color: Color, w: Fl
         topLeft = Offset(50 - r, 50 - r), size = Size(2 * r, 2 * r), style = Stroke(w, cap = cap))
 }
 
-private fun DrawScope.drawGaugeArc(f: Float, n: Int, redFrom: Float?, color: Color, live: Boolean) {
+private fun DrawScope.drawGaugeArc(f: Float, n: Int, redFrom: Float?, color: Color, live: Boolean, f0: Float = 0f) {
     val a0 = -135f; val sw = 270f
     arc(a0, sw, 40f, C.track, 7f)
     redFrom?.let { arc(a0 + sw * it, sw * (1 - it), 46f, C.red.copy(alpha = 0.9f), 2.5f, StrokeCap.Butt) }
-    if (live && f > 0.003f) arc(a0, sw * f, 40f, color, 7f)
+    if (live && kotlin.math.abs(f - f0) > 0.003f) arc(a0 + sw * minOf(f0, f), sw * kotlin.math.abs(f - f0), 40f, color, 7f)
+    if (f0 > 0f) drawLine(C.tick, pt(a0 + sw * f0, 44f), pt(a0 + sw * f0, 36f), 1.5f)
     for (i in 0..n) {
         val a = a0 + sw * i / n
         drawLine(C.tick, pt(a, 33f), pt(a, 27.5f), 1.2f, StrokeCap.Round)

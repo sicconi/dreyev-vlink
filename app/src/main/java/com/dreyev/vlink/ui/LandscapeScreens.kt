@@ -39,7 +39,6 @@ fun LandscapeStatus(s: VehicleState) {
 
 @Composable
 fun DriveLandscape(s: VehicleState, u: UnitPrefs) {
-    val h = hero(s, u)
     Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
             // Pedals
@@ -48,10 +47,7 @@ fun DriveLandscape(s: VehicleState, u: UnitPrefs) {
                 val b = brakePct(s, u)
                 PedalBar("BRAKE", b?.div(u.brakePressureMax), b?.let { "${it.toInt()} ${u.brakePressureUnit}" }, C.red, s.brakePressureBar, Source.MFR)
             }
-            Gauge(
-                h.rpmK, 236.dp, "Speed · RPM ×1000", u.speedUnit, if (s.speedKmh != null) Source.OBD else s.gps?.let { Source.PHONE },
-                if (s.speedKmh != null) "0D · 0C" else "GPS", 0.0, 8.0, 8, 6.5, display = h.speed, sub = h.sub,
-            )
+            HeroGauge(s, u, 236.dp)
             Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     DashCard(Modifier.fillMaxWidth(), padding = 10.dp) {
@@ -72,7 +68,7 @@ fun DriveLandscape(s: VehicleState, u: UnitPrefs) {
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { SteeringWheel(s.steeringDeg?.value, 72.dp) }
                         Text(UnitPrefs.steering(s.steeringDeg?.value), color = C.text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
-                    Gauge(s.engineLoadPct?.value, 88.dp, "Engine load", "%", s.engineLoadPct?.source, "04", redFrom = 90.0)
+                    LoadOrSocGauge(s, 88.dp)
                 }
             }
         }

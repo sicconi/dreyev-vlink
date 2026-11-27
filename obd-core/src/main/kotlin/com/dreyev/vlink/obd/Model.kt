@@ -102,8 +102,21 @@ data class VehicleState(
     val caliperFrontKn: Reading<Double>? = null,
     val caliperRearKn: Reading<Double>? = null,
 
+    // Electric vehicles (MFR)
+    val isEv: Boolean = false,
+    val motorRpmFront: Reading<Double>? = null,
+    val motorRpmRear: Reading<Double>? = null,
+    val socPct: Reading<Double>? = null,
+    val hvCurrentA: Reading<Double>? = null,
+    val hvVoltageV: Reading<Double>? = null,
+    val hvPowerKw: Reading<Double>? = null,
+
     val profileName: String? = null,
 ) {
+    /** Highest motor speed for EVs (front or rear), else engine RPM. */
+    val motorRpm: Reading<Double>? get() =
+        listOfNotNull(motorRpmFront, motorRpmRear).maxByOrNull { kotlin.math.abs(it.value) }?.let { it.copy(value = kotlin.math.abs(it.value)) }
+
     /** Best longitudinal acceleration: car ESC first, then phone. */
     fun longitudinal(now: Long = System.currentTimeMillis()): Reading<Double>? =
         pickAxis(now) { it.longG }

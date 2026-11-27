@@ -93,6 +93,33 @@ class ScreenshotTest {
     @Test fun vehiclePortrait() = portrait(Tab.VEHICLE)
     @Test fun driveMetric() = portrait(Tab.DRIVE, UnitPrefs(UnitSystem.METRIC, TempUnit.C))
 
+    private fun ev(s: VehicleState): VehicleState {
+        val t = System.currentTimeMillis()
+        return s.copy(
+            isEv = true, rpm = null, engineLoadPct = null, pedalPct = null, brakePressureBar = null, brakePedalOn = null,
+            caliperFrontKn = null, caliperRearKn = null, beltDriver = null, beltPassenger = null, turnLeft = null, turnRight = null,
+            carAccel = null, profileName = "Hyundai Ioniq 5 (2022–2024, E-GMP)",
+            engine = Reading(com.dreyev.vlink.obd.EngineState.ON, Source.MFR, "READY", t),
+            socPct = Reading(78.5, Source.MFR, "7E4", t), hvVoltageV = Reading(712.0, Source.MFR, "7E4", t),
+            hvCurrentA = Reading(64.0, Source.MFR, "7E4", t), hvPowerKw = Reading(45.6, Source.MFR, "7E4", t),
+            speedKmh = s.speedKmh?.copy(source = Source.MFR, tag = "7B3"),
+            tires = s.tires.mapValues { (_, ts) -> ts.copy(wheelSpeedKmh = null, caliperForceKn = null) },
+        )
+    }
+
+    @Test fun driveIoniq5() {
+        val s = ev(simulatedState())
+        paparazzi.snapshot {
+            VLinkTheme {
+                Column(Modifier.fillMaxSize().background(C.bg)) {
+                    ScreenHeader("VLink connected", "Bluetooth Classic · ELM327 · 14 Hz", C.green, {}) { EnginePill(s) }
+                    Box(Modifier.fillMaxWidth().weight(1f)) { DriveScreen(s, UnitPrefs(), System.currentTimeMillis()) }
+                    BottomTabs(Tab.entries, Tab.DRIVE) {}
+                }
+            }
+        }
+    }
+
     @Test fun driveLandscape() {
         paparazzi.unsafeUpdateConfig(DeviceConfig.PIXEL_5.copy(orientation = ScreenOrientation.LANDSCAPE))
         val s = simulatedState()
