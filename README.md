@@ -49,6 +49,19 @@ Requires JDK 17+ and the Android SDK (platform 35).
 ./gradlew :app:recordPaparazziDebug          # render screens to app/src/test/snapshots/images
 ```
 
+## Petrol/diesel vs electric
+
+On connect the app works out the powertrain: standard PID 51 (fuel type) if the car reports it,
+otherwise "no engine-RPM PID" means electric, otherwise it asks for the Hyundai/Kia EV battery
+module. With the profile set to **Auto** (default):
+
+* a profile whose VIN prefix matches is used;
+* else an **electric** car gets the Ioniq 5 profile and the EV screens (power arc, SOC, READY);
+* else (petrol, diesel, hybrid) the original layout with standard OBD-II.
+
+The result is shown on the Vehicle & GPS screen ("Detected: …"). Pick a profile by hand in
+Settings to override.
+
 ## Hyundai Ioniq 5 (2022–2024)
 
 `app/src/main/assets/profiles/hyundai-ioniq5.json` is picked automatically from the VIN (or choose it in

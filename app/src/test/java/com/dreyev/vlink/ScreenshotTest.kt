@@ -51,7 +51,7 @@ class ScreenshotTest {
         val store = VehicleStore()
         val sim = SimulatedElm327(latencyMs = 1)
         val demo = ManufacturerProfile.fromJson(SimulatedElm327.DEMO_PROFILE_JSON)
-        val job = launch(Dispatchers.Default) { ObdPoller(Elm327(sim), store, sim.name, sim.kind, true, { demo }).run() }
+        val job = launch(Dispatchers.Default) { ObdPoller(Elm327(sim), store, sim.name, sim.kind, true, { _ -> demo }).run() }
         delay(3_500)
         job.cancel()
         val t = System.currentTimeMillis()

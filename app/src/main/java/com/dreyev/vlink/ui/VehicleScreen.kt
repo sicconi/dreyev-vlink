@@ -53,6 +53,7 @@ fun VehicleScreen(s: VehicleState, u: UnitPrefs, trail: List<Pair<Double, Double
                 color = C.textFaint, fontSize = 11.sp,
             )
             s.profileName?.let { Text("Profile: $it", color = C.textFaint, fontSize = 11.sp) }
+            s.powertrainNote?.let { Text("Detected: $it", color = C.textFaint, fontSize = 11.sp) }
         }
 
         DashCard(Modifier.fillMaxWidth()) {
