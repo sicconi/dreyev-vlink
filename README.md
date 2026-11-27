@@ -84,6 +84,28 @@ and pedal, individual wheel speeds, turn signals, seatbelts and car-sensor accel
 show N/A (G-force falls back to the phone). If steering reads left when turning right, flip the
 sign in the formula.
 
+## Android Auto
+
+The same APK adds a car screen to Android Auto. It draws the gauges on a full-screen surface
+(`app/src/main/java/com/dreyev/vlink/auto/`), with three pages picked from the icons on the right:
+**Drive** (speed, power or RPM, pedals, G-force, steering, SOC or load, turn signals, belts),
+**Tires** (pressure, temperature, reading age, brake and acceleration) and **Vehicle** (VIN,
+odometer, battery or engine, GPS trail and compass). It shares the phone app's adapter link, so
+both screens show the same live data.
+
+To get full graphics the app registers as a *navigation* car app. Google only accepts real
+navigation apps in that category on the Play Store, so this build is meant to be sideloaded:
+
+1. Install the APK, open the phone app once, grant Bluetooth and location, and connect to the VLink
+   adapter (it reconnects automatically after that).
+2. In Android Auto settings on the phone (Settings → Connected devices → Android Auto), tap
+   **Version** about 10 times and accept to turn on developer mode.
+3. In the ⋮ menu choose **Developer settings** and turn on **Unknown sources**.
+4. Connect the phone to the car. "dreyev VLink" appears in the Android Auto launcher.
+
+Car screens are checked with Paparazzi (`carDrive`, `carTires`, `carVehicle`, `carDriveIoniq5`,
+`carVehicleIoniq5`) at 1280×720.
+
 ## Known limits
 
 * MFR signals depend on per-car PIDs; profiles ship for the simulator and the Hyundai Ioniq 5.

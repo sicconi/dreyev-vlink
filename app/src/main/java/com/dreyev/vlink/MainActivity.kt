@@ -62,7 +62,7 @@ class MainActivity : ComponentActivity() {
     private val permissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         app.startPhoneSensors()
         app.scanner.refreshBonded()
-        autoConnect()
+        app.autoConnect()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -88,13 +88,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Reconnect to the last adapter used, once settings have loaded. */
-    private fun autoConnect() {
-        if (app.isConnectionRunning) return
-        val saved = app.settings.value.device ?: return
-        if (app.scanner.isEnabled) app.connect(saved)
-    }
-}
+    /** Reconnect to the last adapter used, once settings have loaded. */}
 
 @Composable
 private fun Dashboard(app: VLinkApp) {
