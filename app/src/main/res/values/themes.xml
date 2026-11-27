@@ -1,0 +1,10 @@
+<resources>
+    <style name="Theme.VLink" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:statusBarColor">@color/bg</item>
+        <item name="android:navigationBarColor">@color/nav</item>
+    </style>
+    <color name="bg">#0B0E12</color>
+    <color name="nav">#0E1217</color>
+    <color name="ic_bg">#0B0E12</color>
+</resources>
