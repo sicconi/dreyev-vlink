@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 class ObdConnection(
     private val scope: CoroutineScope,
     private val store: VehicleStore,
-    private val profileFor: (vin: String?) -> ManufacturerProfile,
+    private val profileFor: (CarIdentity) -> ManufacturerProfile,
     private val log: (String) -> Unit = {},
 ) {
     private var job: Job? = null

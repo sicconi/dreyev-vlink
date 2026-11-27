@@ -15,6 +15,8 @@ import kotlin.math.sin
 class SimulatedElm327(
     private val clock: () -> Long = System::currentTimeMillis,
     private val latencyMs: Long = 25,
+    /** Answer like an electric car: no engine RPM, fuel type PID 51 = electric. */
+    private val electric: Boolean = false,
 ) : ObdTransport() {
     override val name = "VLink simulator"
     override val kind = "Simulator"
@@ -77,14 +79,15 @@ class SimulatedElm327(
         val pid = cmd.drop(2)
         if (header == "7DF" && mode == "01") {
             return when (pid) {
-                "00" -> "4100183B8013"   // 04,05,0C,0D,0F,10,11,1C,1F,20
+                "00" -> if (electric) "4100182B8013" else "4100183B8013"   // 04,05,(0C),0D,0F,10,11,1C,1F,20
+                "51" -> if (electric) "415108" else "415101"
+                "0C" -> if (electric) "NO DATA" else "410C" + hx(*u16((s.rpm * 4).roundToInt()))
                 "20" -> "412080000001"   // 21 … 40
-                "40" -> "414044800001"   // 42,46,49 … 60
+                "40" -> "414044808001"   // 42,46,49,51 … 60
                 "60" -> "416000000001"
                 "80" -> "418000000001"
                 "A0" -> "41A004000000"   // A6
                 "0D" -> "410D" + hx(min(255, s.speedKmh.roundToInt()))
-                "0C" -> "410C" + hx(*u16((s.rpm * 4).roundToInt()))
                 "04" -> "4104" + hx((s.load * 2.55).roundToInt())
                 "11" -> "4111" + hx((s.pedal * 2.55).roundToInt())
                 "49" -> "4149" + hx((s.pedal * 2.55).roundToInt())

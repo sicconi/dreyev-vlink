@@ -48,6 +48,9 @@ data class GpsFix(
 
 enum class EngineState { ON, OFF, UNKNOWN }
 
+/** What the app learned about the car on connect, used to pick a profile and layout. */
+data class CarIdentity(val vin: String?, val isEv: Boolean, val evidence: String = "")
+
 enum class LinkState { DISCONNECTED, CONNECTING, INITIALIZING, CONNECTED, ERROR }
 
 data class LinkInfo(
@@ -112,6 +115,8 @@ data class VehicleState(
     val hvPowerKw: Reading<Double>? = null,
 
     val profileName: String? = null,
+    /** e.g. "Electric · fuel type PID 51 = electric" */
+    val powertrainNote: String? = null,
 ) {
     /** Highest motor speed for EVs (front or rear), else engine RPM. */
     val motorRpm: Reading<Double>? get() =

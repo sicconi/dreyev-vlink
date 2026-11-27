@@ -2,6 +2,7 @@ package com.dreyev.vlink.data
 
 import android.content.Context
 import android.net.Uri
+import com.dreyev.vlink.obd.CarIdentity
 import com.dreyev.vlink.obd.ManufacturerProfile
 import com.dreyev.vlink.obd.SimulatedElm327
 import java.io.File
@@ -33,10 +34,18 @@ class ProfileRepository(private val context: Context) {
         p
     }
 
-    fun resolve(selectedId: String, vin: String?, simulated: Boolean): ManufacturerProfile {
+    /**
+     * Auto mode: a profile whose VIN prefix matches wins; otherwise an electric car gets the
+     * Ioniq 5 profile (the EV layout), and petrol/diesel/hybrid cars get standard OBD-II only.
+     */
+    fun resolve(selectedId: String, car: CarIdentity, simulated: Boolean): ManufacturerProfile {
         if (simulated) return demo
         val list = all()
         if (selectedId != "auto") return list.firstOrNull { it.id == selectedId } ?: ManufacturerProfile.NONE
-        return list.firstOrNull { it.id != "none" && it.matchesVin(vin) } ?: ManufacturerProfile.NONE
+        list.firstOrNull { it.id != "none" && it.matchesVin(car.vin) }?.let { return it }
+        if (car.isEv) list.firstOrNull { it.id == DEFAULT_EV_PROFILE }?.let { return it }
+        return ManufacturerProfile.NONE
     }
+
+    companion object { const val DEFAULT_EV_PROFILE = "hyundai-ioniq5" }
 }

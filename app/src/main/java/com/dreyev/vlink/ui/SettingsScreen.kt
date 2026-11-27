@@ -129,10 +129,10 @@ fun SettingsScreen(app: VLinkApp, onBack: () -> Unit) {
             DashCard(Modifier.fillMaxWidth()) {
                 SectionLabel("Manufacturer profile (MFR signals)")
                 Text(
-                    "Brake, steering, wheel speeds, TPMS, turn signals, seatbelts and car acceleration need manufacturer PIDs. Pick a profile, or Auto to match by VIN.",
+                    "Brake, steering, wheel speeds, TPMS, turn signals, seatbelts and car acceleration need manufacturer PIDs. Auto picks a profile by VIN; any electric car without a match uses the Ioniq 5 profile and EV screens, and petrol/diesel cars use standard OBD-II.",
                     color = C.textFaint, fontSize = 11.sp,
                 )
-                ChoiceRow("Auto (match by VIN)", settings.profileId == "auto") { scope.launch { app.settingsRepo.setProfile("auto") } }
+                ChoiceRow("Auto (VIN, then EV → Ioniq 5)", settings.profileId == "auto") { scope.launch { app.settingsRepo.setProfile("auto") } }
                 profiles.forEach { p ->
                     ChoiceRow(p.name, settings.profileId == p.id, p.notes) { scope.launch { app.settingsRepo.setProfile(p.id) } }
                 }

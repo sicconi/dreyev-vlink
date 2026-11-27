@@ -60,7 +60,7 @@ class VLinkApp : Application() {
         }
         connection = ObdConnection(
             scope, store,
-            profileFor = { vin -> profiles.resolve(settings.value.profileId, vin, simulated) },
+            profileFor = { car -> profiles.resolve(settings.value.profileId, car, simulated) },
             log = { Log.d("VLink", it) },
         )
     }

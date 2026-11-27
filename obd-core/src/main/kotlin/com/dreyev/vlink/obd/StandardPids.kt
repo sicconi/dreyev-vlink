@@ -10,6 +10,7 @@ object StandardPids {
     const val AMBIENT = 0x46      // °C = A-40
     const val RUNTIME = 0x1F      // s = 256A+B
     const val ODOMETER = 0xA6     // km = (A<<24|B<<16|C<<8|D)/10
+    const val FUEL_TYPE = 0x51    // SAE J1979 fuel type code; 8 = electric
 
     fun speedKmh(b: IntArray) = b[0].toDouble()
     fun rpm(b: IntArray) = (b[0] * 256 + b[1]) / 4.0
@@ -26,6 +27,11 @@ object StandardPids {
             if (b[i] and (0x80 shr bit) != 0) out += base + i * 8 + bit + 1
         }
         return out
+    }
+
+    fun fuelTypeName(code: Int): String = when (code) {
+        1 -> "gasoline"; 2 -> "methanol"; 3 -> "ethanol"; 4 -> "diesel"; 5 -> "LPG"; 6 -> "CNG"; 7 -> "propane"
+        8 -> "electric"; 9 -> "bifuel gasoline"; in 0x11..0x17 -> "hybrid"; else -> "code $code"
     }
 
     fun hex(pid: Int) = String.format("%02X", pid)

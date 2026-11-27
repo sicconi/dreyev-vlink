@@ -17,7 +17,7 @@ class PollerTest {
         val sim = SimulatedElm327(latencyMs = 2)
         val demo = ManufacturerProfile.fromJson(SimulatedElm327.DEMO_PROFILE_JSON)
         val job = launch(Dispatchers.Default) {
-            ObdPoller(Elm327(sim), store, sim.name, sim.kind, true, { vin -> if (demo.matchesVin(vin)) demo else ManufacturerProfile.NONE }).run()
+            ObdPoller(Elm327(sim), store, sim.name, sim.kind, true, { id -> if (demo.matchesVin(id.vin)) demo else ManufacturerProfile.NONE }).run()
         }
         withContext(Dispatchers.Default) { delay(4_000) }
         job.cancel()
@@ -39,5 +39,24 @@ class PollerTest {
         assertEquals(true, s.beltDriver?.value)
         assertEquals(Source.MFR, s.longitudinal()?.source)
         assertTrue(s.link.pollHz > 5, "poll rate ${s.link.pollHz}")
+    }
+
+    @Test fun detectsPetrolCar() = runBlocking { assertEquals(false, identify(electric = false).isEv) }
+
+    @Test fun detectsElectricCar() = runBlocking {
+        val id = identify(electric = true)
+        assertEquals(true, id.isEv)
+        assertTrue(id.evidence.contains("electric"), id.evidence)
+    }
+
+    private suspend fun identify(electric: Boolean): CarIdentity {
+        var seen: CarIdentity? = null
+        val sim = SimulatedElm327(latencyMs = 1, electric = electric)
+        val job = kotlinx.coroutines.CoroutineScope(Dispatchers.Default).launch {
+            ObdPoller(Elm327(sim), VehicleStore(), sim.name, sim.kind, true, { id -> seen = id; ManufacturerProfile.NONE }).run()
+        }
+        withContext(Dispatchers.Default) { while (seen == null) delay(20) }
+        job.cancel()
+        return seen!!
     }
 }

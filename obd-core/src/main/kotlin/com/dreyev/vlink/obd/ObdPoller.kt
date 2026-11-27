@@ -15,8 +15,8 @@ class ObdPoller(
     private val transportName: String,
     private val transportKind: String,
     private val simulated: Boolean,
-    /** Chooses the manufacturer profile once the VIN is known (null VIN if unreadable). */
-    private val pickProfile: (vin: String?) -> ManufacturerProfile,
+    /** Chooses the manufacturer profile once the car is identified (VIN, petrol/diesel or electric). */
+    private val pickProfile: (CarIdentity) -> ManufacturerProfile,
     private val clock: () -> Long = System::currentTimeMillis,
     private val log: (String) -> Unit = {},
 ) {
@@ -42,9 +42,11 @@ class ObdPoller(
         log("supported PIDs: ${supported.sorted().joinToString { StandardPids.hex(it) }}")
 
         val vin = readVin()
-        profile = pickProfile(vin)
+        val (ev, why) = detectEv()
+        log("powertrain: ${if (ev) "electric" else "combustion/hybrid"} ($why)")
+        profile = pickProfile(CarIdentity(vin, ev, why))
         for (c in profile.initCommands) elm.command(c)
-        store.update { it.copy(profileName = profile.name, isEv = profile.isEv) }
+        store.update { it.copy(profileName = profile.name, isEv = profile.isEv || ev, powertrainNote = (if (ev) "Electric" else "Combustion / hybrid") + " · " + why) }
         store.updateLink {
             it.copy(state = LinkState.CONNECTED, elmVersion = info.version, protocol = info.protocol, message = null)
         }
@@ -87,6 +89,27 @@ class ObdPoller(
             base += 0x20
         }
         return out
+    }
+
+    /**
+     * Petrol/diesel/hybrid vs battery-electric:
+     *  1. standard PID 51 (fuel type) when the car reports it: 8 = electric;
+     *  2. engines always answer PID 0C (RPM), so a car that lists PIDs but not 0C is electric;
+     *  3. otherwise ask the Hyundai/Kia EV battery module (7E4, 220101), which only EVs have.
+     */
+    private suspend fun detectEv(): Pair<Boolean, String> {
+        if (StandardPids.FUEL_TYPE in supported) {
+            val r = elm.query("0151")
+            if (r is ObdResult.Data && r.bytes.isNotEmpty()) {
+                val ft = r.bytes[0]
+                return (ft == 8) to "fuel type PID 51 = ${StandardPids.fuelTypeName(ft)}"
+            }
+        }
+        if (StandardPids.RPM in supported) return false to "engine RPM PID supported"
+        if (supported.isNotEmpty()) return true to "no engine RPM PID"
+        val r = elm.query("220101", header = "7E4", timeoutMs = 2_000)
+        return if (r is ObdResult.Data && r.bytes.size > 40) true to "EV battery module answered"
+        else false to "no EV battery module found"
     }
 
     private suspend fun readVin(): String? {
