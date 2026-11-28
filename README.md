@@ -2,7 +2,7 @@
 
 Native Kotlin / Jetpack Compose app that connects to a VLink (ELM327-compatible) OBD-II
 Bluetooth adapter and shows the car's data on analog and digital gauges, in portrait
-(Drive · Tires & chassis · Vehicle & GPS) and landscape (Drive · Tires & chassis).
+(Drive · Tires & chassis · Vehicle & GPS · Map) and landscape (Drive · Tires & chassis · Map).
 
 ## Install the APK
 
@@ -120,11 +120,14 @@ Saved across restarts. The Android Auto screen always uses the dark palette.
 
 ## Android Auto
 
-The same APK adds a car screen to Android Auto. It draws the gauges on a full-screen surface
-(`app/src/main/java/com/dreyev/vlink/auto/`), with three pages picked from the icons on the right:
+The `sideload` build adds a car screen to Android Auto. It draws the gauges on a full-screen surface
+(`app/src/sideload/java/com/dreyev/vlink/auto/`), with four pages picked from the icons on the right:
 **Drive** (speed, power or RPM, pedals, G-force, steering, SOC or load, turn signals, belts),
 **Tires** (pressure, temperature, reading age, brake and acceleration) and **Vehicle** (VIN,
-odometer, battery or engine, GPS trail and compass). It shares the phone app's adapter link, so
+odometer, battery or engine, GPS trail and compass) and **Map** (a Google map with the trace,
+heading-up while moving, with speed and power chips). The map page renders a `MapView` into a
+private virtual display whose output is the car surface; if that fails, or no Maps key was built
+in, it draws the offline trace instead. It shares the phone app's adapter link, so
 both screens show the same live data.
 
 To get full graphics the app registers as a *navigation* car app. Google only accepts real
@@ -138,7 +141,43 @@ navigation apps in that category on the Play Store, so this build is meant to be
 4. Connect the phone to the car. "dreyev VLink" appears in the Android Auto launcher.
 
 Car screens are checked with Paparazzi (`carDrive`, `carTires`, `carVehicle`, `carDriveIoniq5`,
-`carVehicleIoniq5`) at 1280×720.
+`carVehicleIoniq5`, `carMap`) at 1280×720.
+
+## Google Maps key
+
+The Map tab, the map in the Vehicle & GPS card and the Android Auto map page use the Google Maps
+SDK for Android. The key is read at build time from `MAPS_API_KEY` in `local.properties`
+(git-ignored) or from the `MAPS_API_KEY` environment variable. **Never commit it.** Without a key
+the app builds and runs normally and shows the offline breadcrumb trace instead of a map.
+
+Create and restrict the key (about 10 minutes):
+
+1. Open <https://console.cloud.google.com/>, sign in, and create a project (e.g. "dreyev VLink").
+2. **Billing**: link a billing account to the project (Billing → Link a billing account). Google
+   requires one for any Maps key. Map loads in the Android Maps SDK (Mobile Native Dynamic Maps)
+   are free with no monthly cap, so this app should cost nothing; add a budget alert (Billing →
+   Budgets & alerts, e.g. $1) for peace of mind.
+3. **Enable the API**: APIs & Services → Library → search "Maps SDK for Android" → Enable.
+   Nothing else is needed.
+4. **Create the key**: APIs & Services → Credentials → Create credentials → API key.
+5. **Restrict it** (Edit API key):
+   * Application restrictions → **Android apps** → Add an item for each build you install:
+     package `com.dreyev.vlink.sideload` (Android Auto build) and `com.dreyev.vlink` (phone /
+     Play build), each with the SHA-1 of the key that signs that APK. Get it with
+     `keytool -list -v -keystore <keystore> -alias <alias>` (debug builds:
+     `~/.android/debug.keystore`, alias `androiddebugkey`, password `android`). For the Play
+     build, also add the **App signing key** SHA-1 from Play Console → Setup → App signing.
+   * API restrictions → **Restrict key** → tick only **Maps SDK for Android**. Save.
+6. Put the key in `local.properties` next to `sdk.dir`:
+   ```
+   MAPS_API_KEY=AIza...
+   ```
+   and rebuild. Restrictions can take a few minutes to apply.
+
+A key built into an APK can be read by anyone who has the APK; the package + SHA-1 and API
+restrictions are what stop others from using it. If the map stays grey with a "Google" logo,
+the restriction doesn't match the installed APK: check Logcat for `Authorization failure` and
+the SHA-1 it prints.
 
 ## Known limits
 
