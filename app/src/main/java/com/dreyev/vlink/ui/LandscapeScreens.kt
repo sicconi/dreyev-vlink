@@ -47,7 +47,10 @@ fun DriveLandscape(s: VehicleState, u: UnitPrefs) {
                 val b = brakePct(s, u)
                 PedalBar("BRAKE", b?.div(u.brakePressureMax), b?.let { "${it.toInt()} ${u.brakePressureUnit}" }, C.red, s.brakePressureBar, Source.MFR)
             }
-            HeroGauge(s, u, 236.dp)
+            if (s.isEv) {
+                EvSpeedGauge(s, u, 160.dp)
+                PowerGauge(s, 160.dp)
+            } else HeroGauge(s, u, 236.dp)
             Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     DashCard(Modifier.fillMaxWidth(), padding = 10.dp) {

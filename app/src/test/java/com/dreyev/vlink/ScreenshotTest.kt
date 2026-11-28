@@ -10,8 +10,6 @@ import app.cash.paparazzi.DeviceConfig
 import app.cash.paparazzi.Paparazzi
 import com.android.resources.Density
 import com.android.resources.ScreenOrientation
-import com.dreyev.vlink.auto.CarDashRenderer
-import com.dreyev.vlink.auto.CarPage
 import com.dreyev.vlink.obd.Elm327
 import com.dreyev.vlink.obd.GpsFix
 import com.dreyev.vlink.obd.ManufacturerProfile
@@ -32,6 +30,7 @@ import com.dreyev.vlink.ui.DriveScreen
 import com.dreyev.vlink.ui.EnginePill
 import com.dreyev.vlink.ui.ScreenHeader
 import com.dreyev.vlink.ui.Tab
+import com.dreyev.vlink.ui.ThemeMode
 import com.dreyev.vlink.ui.TiresLandscape
 import com.dreyev.vlink.ui.TiresScreen
 import com.dreyev.vlink.ui.VLinkTheme
@@ -50,31 +49,11 @@ class ScreenshotTest {
     @get:Rule
     val paparazzi = Paparazzi(deviceConfig = DeviceConfig.PIXEL_5, maxPercentDifference = 0.1)
 
-    private fun simulatedState(): VehicleState = runBlocking {
-        val store = VehicleStore()
-        val sim = SimulatedElm327(latencyMs = 1)
-        val demo = ManufacturerProfile.fromJson(SimulatedElm327.DEMO_PROFILE_JSON)
-        val job = launch(Dispatchers.Default) { ObdPoller(Elm327(sim), store, sim.name, sim.kind, true, { _ -> demo }).run() }
-        delay(3_500)
-        job.cancel()
-        val t = System.currentTimeMillis()
-        store.update {
-            it.copy(
-                phoneAccel = Reading(Accel3(0.12, -0.2, 1.03), Source.PHONE, "IMU", t),
-                gps = Reading(GpsFix(25.76171, -80.19180, 3.7, 74.8, 72.0, 3.0, 11), Source.PHONE, "GNSS", t),
-                gpsAccelMs2 = Reading(0.9, Source.PHONE, "GNSS", t),
-            )
-        }
-        store.state.value
-    }
-
-    private val trail = (0 until 60).map { i -> (25.76171 - (60 - i) * 0.00001) to (-80.19180 - (60 - i) * 0.00002) }
-
-    private fun portrait(tab: Tab, u: UnitPrefs = UnitPrefs()) {
-        val s = simulatedState()
+    private fun portrait(tab: Tab, u: UnitPrefs = UnitPrefs(), theme: ThemeMode = ThemeMode.DARK) {
+        val s = TestStates.simulated()
         val now = System.currentTimeMillis()
         paparazzi.snapshot {
-            VLinkTheme {
+            VLinkTheme(theme) {
                 Column(Modifier.fillMaxSize().background(C.bg)) {
                     val (title, dot) = linkTitle(s)
                     ScreenHeader(if (tab == Tab.DRIVE) title else tab.title, linkSubtitle(s), dot, {}) { EnginePill(s) }
@@ -82,7 +61,7 @@ class ScreenshotTest {
                         when (tab) {
                             Tab.DRIVE -> DriveScreen(s, u, now)
                             Tab.TIRES -> TiresScreen(s, u, now)
-                            Tab.VEHICLE -> VehicleScreen(s, u, trail)
+                            Tab.VEHICLE -> VehicleScreen(s, u, TestStates.trail)
                         }
                     }
                     BottomTabs(Tab.entries, tab) {}
@@ -94,24 +73,13 @@ class ScreenshotTest {
     @Test fun drivePortrait() = portrait(Tab.DRIVE)
     @Test fun tiresPortrait() = portrait(Tab.TIRES)
     @Test fun vehiclePortrait() = portrait(Tab.VEHICLE)
+    @Test fun driveLight() = portrait(Tab.DRIVE, theme = ThemeMode.LIGHT)
+    @Test fun tiresLight() = portrait(Tab.TIRES, theme = ThemeMode.LIGHT)
+    @Test fun vehicleLight() = portrait(Tab.VEHICLE, theme = ThemeMode.LIGHT)
     @Test fun driveMetric() = portrait(Tab.DRIVE, UnitPrefs(UnitSystem.METRIC, TempUnit.C))
 
-    private fun ev(s: VehicleState): VehicleState {
-        val t = System.currentTimeMillis()
-        return s.copy(
-            isEv = true, rpm = null, engineLoadPct = null, pedalPct = null, brakePressureBar = null, brakePedalOn = null,
-            caliperFrontKn = null, caliperRearKn = null, beltDriver = null, beltPassenger = null, turnLeft = null, turnRight = null,
-            carAccel = null, profileName = "Hyundai Ioniq 5 (2022–2024, E-GMP)",
-            engine = Reading(com.dreyev.vlink.obd.EngineState.ON, Source.MFR, "READY", t),
-            socPct = Reading(78.5, Source.MFR, "7E4", t), hvVoltageV = Reading(712.0, Source.MFR, "7E4", t),
-            hvCurrentA = Reading(64.0, Source.MFR, "7E4", t), hvPowerKw = Reading(45.6, Source.MFR, "7E4", t),
-            speedKmh = s.speedKmh?.copy(source = Source.MFR, tag = "7B3"),
-            tires = s.tires.mapValues { (_, ts) -> ts.copy(wheelSpeedKmh = null, caliperForceKn = null) },
-        )
-    }
-
     @Test fun driveIoniq5() {
-        val s = ev(simulatedState())
+        val s = TestStates.ev(TestStates.simulated())
         paparazzi.snapshot {
             VLinkTheme {
                 Column(Modifier.fillMaxSize().background(C.bg)) {
@@ -123,39 +91,38 @@ class ScreenshotTest {
         }
     }
 
+    @Test fun driveIoniq5Regen() {
+        val t = System.currentTimeMillis()
+        val s = TestStates.ev(TestStates.simulated()).copy(
+            hvPowerKw = Reading(-38.0, Source.MFR, "7E4", t), rearMotorKw = Reading(-30.0, Source.MFR, "7E3", t),
+            motorRpmFront = Reading(0.0, Source.MFR, "7E4", t),
+        )
+        paparazzi.snapshot {
+            VLinkTheme {
+                Column(Modifier.fillMaxSize().background(C.bg)) {
+                    ScreenHeader("VLink connected", "Bluetooth Classic · ELM327 · 14 Hz", C.green, {}) { EnginePill(s) }
+                    Box(Modifier.fillMaxWidth().weight(1f)) { DriveScreen(s, UnitPrefs(), t) }
+                    BottomTabs(Tab.entries, Tab.DRIVE) {}
+                }
+            }
+        }
+    }
+
+    @Test fun driveLandscapeIoniq5() {
+        paparazzi.unsafeUpdateConfig(DeviceConfig.PIXEL_5.copy(orientation = ScreenOrientation.LANDSCAPE))
+        val s = TestStates.ev(TestStates.simulated())
+        paparazzi.snapshot { VLinkTheme { Box(Modifier.fillMaxSize().background(C.bg)) { DriveLandscape(s, UnitPrefs()) } } }
+    }
+
     @Test fun driveLandscape() {
         paparazzi.unsafeUpdateConfig(DeviceConfig.PIXEL_5.copy(orientation = ScreenOrientation.LANDSCAPE))
-        val s = simulatedState()
+        val s = TestStates.simulated()
         paparazzi.snapshot { VLinkTheme { Box(Modifier.fillMaxSize().background(C.bg)) { DriveLandscape(s, UnitPrefs()) } } }
     }
 
     @Test fun tiresLandscape() {
         paparazzi.unsafeUpdateConfig(DeviceConfig.PIXEL_5.copy(orientation = ScreenOrientation.LANDSCAPE))
-        val s = simulatedState()
+        val s = TestStates.simulated()
         paparazzi.snapshot { VLinkTheme { Box(Modifier.fillMaxSize().background(C.bg)) { TiresLandscape(s, UnitPrefs(), System.currentTimeMillis()) } } }
     }
-
-    // ---- Android Auto car screen (1280×720 head unit; right 110 px kept clear for the action strip) ----
-
-    private fun car(page: CarPage, s: VehicleState) {
-        paparazzi.unsafeUpdateConfig(
-            DeviceConfig.PIXEL_5.copy(
-                screenWidth = 1280, screenHeight = 720, xdpi = 160, ydpi = 160,
-                density = Density.MEDIUM, orientation = ScreenOrientation.LANDSCAPE,
-            )
-        )
-        val renderer = CarDashRenderer()
-        val view = object : android.view.View(paparazzi.context) {
-            override fun onDraw(canvas: android.graphics.Canvas) {
-                renderer.draw(canvas, android.graphics.Rect(0, 0, width - 110, height), page, s, UnitPrefs(), trail)
-            }
-        }
-        paparazzi.snapshot(view)
-    }
-
-    @Test fun carDrive() = car(CarPage.DRIVE, simulatedState())
-    @Test fun carTires() = car(CarPage.TIRES, simulatedState())
-    @Test fun carVehicle() = car(CarPage.VEHICLE, simulatedState())
-    @Test fun carDriveIoniq5() = car(CarPage.DRIVE, ev(simulatedState()))
-    @Test fun carVehicleIoniq5() = car(CarPage.VEHICLE, ev(simulatedState()))
 }

@@ -10,6 +10,7 @@ import com.dreyev.vlink.bt.LinkKind
 import com.dreyev.vlink.obd.TempUnit
 import com.dreyev.vlink.obd.UnitPrefs
 import com.dreyev.vlink.obd.UnitSystem
+import com.dreyev.vlink.ui.ThemeMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -24,6 +25,8 @@ data class AppSettings(
     val profileId: String = "auto",
     val keepScreenOn: Boolean = true,
     val mountCalibration: String? = null,
+    /** System (follow the phone), or always Dark / always Light. */
+    val theme: ThemeMode = ThemeMode.SYSTEM,
 )
 
 /** Persisted settings (DataStore). First launch = Imperial + °F. */
@@ -37,6 +40,7 @@ class SettingsRepository(private val context: Context) {
         val profile = stringPreferencesKey("profile_id")
         val screenOn = booleanPreferencesKey("keep_screen_on")
         val mount = stringPreferencesKey("mount_calibration")
+        val theme = stringPreferencesKey("theme_mode")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p -> p.toSettings() }
@@ -53,6 +57,7 @@ class SettingsRepository(private val context: Context) {
             profileId = this[K.profile] ?: "auto",
             keepScreenOn = this[K.screenOn] ?: true,
             mountCalibration = this[K.mount],
+            theme = this[K.theme]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.SYSTEM,
         )
     }
 
@@ -66,6 +71,7 @@ class SettingsRepository(private val context: Context) {
         else { it[K.devAddr] = d.address; it[K.devName] = d.name; it[K.devKind] = d.kind.name }
     }
     suspend fun setProfile(id: String) = context.dataStore.edit { it[K.profile] = id }
+    suspend fun setTheme(t: ThemeMode) = context.dataStore.edit { it[K.theme] = t.name }
     suspend fun setKeepScreenOn(v: Boolean) = context.dataStore.edit { it[K.screenOn] = v }
     suspend fun setMountCalibration(v: String?) = context.dataStore.edit {
         if (v == null) it.remove(K.mount) else it[K.mount] = v

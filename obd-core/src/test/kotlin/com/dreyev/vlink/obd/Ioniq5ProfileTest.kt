@@ -49,11 +49,84 @@ class Ioniq5ProfileTest {
         val b = IntArray(60)
         b[10] = 0xFF; b[11] = 0x9C          // K,L → -10.0 A (regen)
         b[12] = 0x0E; b[13] = 0x10          // M,N → 360.0 V
-        b[50] = 0b100                       // AY bit 2 → READY
+        b[51] = 0x01; b[52] = 0x68          // AZ,BA → inverter capacitor 360 V → HV on (READY)
         assertEquals(-10.0, value(MfrSignal.BATTERY_CURRENT, b))
         assertEquals(360.0, value(MfrSignal.BATTERY_VOLTAGE, b))
         assertEquals(1.0, value(MfrSignal.READY, b))
         val s = IntArray(20); s[12] = 0x4C; s[13] = 0xFF   // M=0x4C, N=0xFF → signed(0xFF4C)/10 = -18.0°
         assertEquals(-18.0, value(MfrSignal.STEERING_ANGLE, s))
+    }
+
+    // ---- Real 2022 Ioniq 5 captures (OBDb/Hyundai-IONIQ-5 test cases, CC BY-SA 4.0) ----
+
+    /** Turn "738 10 22 62 F0 10 FF FF 00"-style CAN lines (headers on) into the data after 62xxxx. */
+    private fun fromCan(vararg lines: String): IntArray {
+        val payload = ArrayList<Int>()
+        var len = 0
+        for (l in lines) {
+            val b = Elm327.hexToInts(l.replace(" ", "").drop(3))
+            when (b[0] shr 4) {
+                0 -> { len = b[0] and 0x0F; payload += b.drop(1) }
+                1 -> { len = ((b[0] and 0x0F) shl 8) or b[1]; payload += b.drop(2) }
+                2 -> payload += b.drop(1)
+            }
+        }
+        return payload.take(len).drop(3).toIntArray()
+    }
+
+    @Test fun chassis730FromCarCapture() {
+        val b = fromCan(
+            "738102262F010FFFF00", "7382100010409040904", "7382206041300847E0F",
+            "73823814E80000001FC", "73824362B052E0D9113",
+        )
+        assertEquals(1.9, value(MfrSignal.STEERING_ANGLE, b), 1e-6)
+        assertEquals(32.28125, value(MfrSignal.WHEEL_SPEED_FL, b), 1e-6)
+        assertEquals(32.03125, value(MfrSignal.WHEEL_SPEED_FR, b), 1e-6)
+        assertEquals(32.1875, value(MfrSignal.WHEEL_SPEED_RL, b), 1e-6)
+        assertEquals(32.28125, value(MfrSignal.WHEEL_SPEED_RR, b), 1e-6)
+        assertEquals(-0.04838 / 9.80665, value(MfrSignal.ACCEL_LAT, b), 1e-5)
+        assertEquals(0.03461 / 9.80665, value(MfrSignal.ACCEL_LONG, b), 1e-5)
+    }
+
+    @Test fun steeringFromMdpsCapture() {
+        val b = fromCan("7DC1016620101FFF800", "7DC21007E7CFFFFC9FF", "7DC22FC012401651010", "7DC232701AAAAAAAAAA")
+        assertEquals(-5.5, value(MfrSignal.STEERING_ANGLE_ALT, b), 1e-6)
+        val c = fromCan("7DC1016620101FFF800", "7DC21007D7C000013FF", "7DC22F4FE67040A1010", "7DC232701AAAAAAAAAA")
+        assertEquals(1.9, value(MfrSignal.STEERING_ANGLE_ALT, c), 1e-6)
+    }
+
+    @Test fun rearMotorPowerFromMcuCapture() {
+        // 266.2 N·m at 2,092 rpm → 58.3 kW (OBDb 2022 capture, 30-frame reply)
+        val lines = """7EB10CB62E001FFFFFF 7EB21FF6001B977CA37 7EB2200580E31056D39 7EB232C08660A660A91
+            7EB2406F700BAFFFBFF 7EB25FDFFFAFFCDAB18 7EB2609053505CB0EB2 7EB270AC2CD19006AFA
+            7EB28050004FC6CFEC1 7EB29CDF1034EFCC1CD 7EB2AE5030D01000000""".split(Regex("\\s+")).filter { it.isNotBlank() }
+        val b = fromCan(*(lines + List(19) { "7EB2" + "0".repeat(15) }).toTypedArray())
+        assertEquals(266.2 * 2092 * 2 * Math.PI / 60 / 1000, value(MfrSignal.REAR_MOTOR_POWER, b), 0.01)
+    }
+
+    @Test fun odometerInMilesOnUsCars() {
+        // US cars leave the km field at 0 and fill the miles field.
+        val b = fromCan("7CE 10 0F 62 B0 02 D0 00 00", "7CE 21 00 FF AE 00 00 00 01", "7CE 22 B0 70 AA AA AA AA AA")
+        assertEquals(110704 * 1.609344, value(MfrSignal.ODOMETER, b), 0.01)
+    }
+
+    @Test fun brakeSwitch() {
+        assertEquals(1.0, value(MfrSignal.BRAKE_PEDAL, fromCan("7A8100B62B008040108", "7A8210000001000AAAA")))
+        assertEquals(0.0, value(MfrSignal.BRAKE_PEDAL, fromCan("7A8100B62B008040108", "7A8210000000000AAAA")))
+    }
+
+    @Test fun acceleratorPedal() {
+        val b = fromCan("7EA102262E004FC0000", "7EA210000080004E308", "7EA2267039D75050000", "7EA2300000000000000", "7EA24000000FFF80000")
+        assertEquals(4.44336, value(MfrSignal.ACCEL_PEDAL, b), 1e-4)
+    }
+
+    @Test fun readyFromInverterVoltage() {
+        val b = fromCan(
+            "7EC103E620101EFFBE7", "7EC21EF1A0000000000", "7EC220028182F222021", "7EC23212121200047AC",
+            "7EC24ADAB0800008D00", "7EC2505C8D20005A2A8", "7EC26000409370003C6", "7EC27E80247423D0002",
+            "7EC286BFF4DFF4D05F0",
+        )
+        assertEquals(1.0, value(MfrSignal.READY, b))         // capacitor 619 V while driving
+        assertEquals(-179.0, value(MfrSignal.MOTOR_RPM_REAR, b))
     }
 }

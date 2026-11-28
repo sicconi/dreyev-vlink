@@ -19,10 +19,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-
-    <!-- Android Auto: full-screen drawing surface (navigation-category car app) -->
-    <uses-permission android:name="androidx.car.app.NAVIGATION_TEMPLATES" />
-    <uses-permission android:name="androidx.car.app.ACCESS_SURFACE" />
+    <!-- Only Android 8–9 need this to copy logs into Downloads/dreyev-vlink -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
@@ -54,21 +52,15 @@
             android:exported="false"
             android:foregroundServiceType="connectedDevice|location" />
 
-        <!-- Android Auto. Sideloaded builds need Android Auto developer mode + "Unknown sources". -->
-        <meta-data
-            android:name="com.google.android.gms.car.application"
-            android:resource="@xml/automotive_app_desc" />
-        <meta-data
-            android:name="androidx.car.app.minCarApiLevel"
-            android:value="1" />
-        <service
-            android:name=".auto.VLinkCarAppService"
-            android:exported="true"
-            tools:ignore="ExportedService">
-            <intent-filter>
-                <action android:name="androidx.car.app.CarAppService" />
-                <category android:name="androidx.car.app.category.NAVIGATION" />
-            </intent-filter>
-        </service>
+        <!-- Lets the signal finder share its CSV logs (and trip logs) with other apps. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 </manifest>

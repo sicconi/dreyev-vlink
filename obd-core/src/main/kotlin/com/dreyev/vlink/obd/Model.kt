@@ -113,11 +113,26 @@ data class VehicleState(
     val hvCurrentA: Reading<Double>? = null,
     val hvVoltageV: Reading<Double>? = null,
     val hvPowerKw: Reading<Double>? = null,
+    /** Rear motor mechanical power from the motor controller (torque × rpm); + traction, − regen. */
+    val rearMotorKw: Reading<Double>? = null,
 
     val profileName: String? = null,
     /** e.g. "Electric · fuel type PID 51 = electric" */
     val powertrainNote: String? = null,
 ) {
+    /**
+     * Front motor power, estimated as battery power minus rear motor power. Zero while the
+     * front motor is not turning (RWD cars, or AWD with the front axle disconnected).
+     * Includes heating/AC and 12 V loads, so it reads a few kW high when the front motor works.
+     */
+    fun frontMotorKwEst(now: Long = System.currentTimeMillis()): Reading<Double>? {
+        val rear = rearMotorKw?.takeIf { it.isFresh(now, 3_000) } ?: return null
+        val frontRpm = motorRpmFront?.takeIf { it.isFresh(now, 3_000) }?.value
+        if (frontRpm != null && kotlin.math.abs(frontRpm) < 30) return Reading(0.0, Source.EST, "front idle", rear.timeMs)
+        val total = hvPowerKw?.takeIf { it.isFresh(now, 3_000) } ?: return null
+        return Reading(total.value - rear.value, Source.EST, "battery − rear", maxOf(total.timeMs, rear.timeMs))
+    }
+
     /** Highest motor speed for EVs (front or rear), else engine RPM. */
     val motorRpm: Reading<Double>? get() =
         listOfNotNull(motorRpmFront, motorRpmRear).maxByOrNull { kotlin.math.abs(it.value) }?.let { it.copy(value = kotlin.math.abs(it.value)) }

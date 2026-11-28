@@ -238,6 +238,11 @@ class ObdPoller(
                 }
             }
             MfrSignal.STEERING_ANGLE -> store.update { it.copy(steeringDeg = num()) }
+            MfrSignal.STEERING_ANGLE_ALT -> store.update {
+                val cur = it.steeringDeg
+                // Primary source wins while it is fresh; otherwise the alternate keeps the gauge alive.
+                if (cur != null && cur.tag != tag && t - cur.timeMs < 1_500) it else it.copy(steeringDeg = num())
+            }
             MfrSignal.WHEEL_SPEED_FL -> store.updateTire(Corner.FL) { it.copy(wheelSpeedKmh = num()) }
             MfrSignal.WHEEL_SPEED_FR -> store.updateTire(Corner.FR) { it.copy(wheelSpeedKmh = num()) }
             MfrSignal.WHEEL_SPEED_RL -> store.updateTire(Corner.RL) { it.copy(wheelSpeedKmh = num()) }
@@ -275,6 +280,7 @@ class ObdPoller(
             MfrSignal.READY -> store.update { it.copy(engine = Reading(if (v != 0.0) EngineState.ON else EngineState.OFF, Source.MFR, "READY", t)) }
             MfrSignal.MOTOR_RPM_FRONT -> store.update { it.copy(motorRpmFront = num()) }
             MfrSignal.MOTOR_RPM_REAR -> store.update { it.copy(motorRpmRear = num()) }
+            MfrSignal.REAR_MOTOR_POWER -> store.update { it.copy(rearMotorKw = num()) }
             MfrSignal.BATTERY_SOC -> store.update { it.copy(socPct = num()) }
             MfrSignal.BATTERY_CURRENT -> store.update { s ->
                 val p = s.hvVoltageV?.let { u -> Reading(u.value * v / 1000.0, Source.MFR, tag, t) }

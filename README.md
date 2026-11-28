@@ -41,12 +41,18 @@ All values are stored metric internally.
 
 ## Build
 
-Requires JDK 17+ and the Android SDK (platform 35).
+Requires JDK 17+ and the Android SDK (platform 36).
+
+Two flavors: `play` (`com.dreyev.vlink`, the Google Play phone app, no Android Auto) and
+`sideload` (`com.dreyev.vlink.sideload`, "dreyev VLink AA", adds the Android Auto module from
+`app/src/sideload`). Releasing to Play: see [docs/play-store/RELEASE.md](docs/play-store/RELEASE.md).
 
 ```
-./gradlew :app:assembleDebug                 # APK → app/build/outputs/apk/debug/
+./gradlew :app:assemblePlayDebug             # phone app APK → app/build/outputs/apk/play/debug/
+./gradlew :app:assembleSideloadDebug         # phone + Android Auto APK
+./gradlew :app:bundlePlayRelease             # signed AAB for Google Play (needs your upload key)
 ./gradlew -PcoreOnly=true :obd-core:test     # data-layer tests, no Android SDK needed
-./gradlew :app:recordPaparazziDebug          # render screens to app/src/test/snapshots/images
+./gradlew :app:recordPaparazziSideloadDebug  # render phone + car screens to app/src/test/snapshots/images
 ```
 
 ## Petrol/diesel vs electric
@@ -65,24 +71,52 @@ Settings to override.
 ## Hyundai Ioniq 5 (2022–2024)
 
 `app/src/main/assets/profiles/hyundai-ioniq5.json` is picked automatically from the VIN (or choose it in
-Settings). It uses community-published PIDs (Esprit1st/Hyundai-Ioniq-5-Torque-Pro-PIDs, built on
-JejuSoul/OBD-PIDs-for-HKMC-EVs), not yet verified on a car:
+Settings). Sources: [OBDb/Hyundai-IONIQ-5](https://github.com/OBDb/Hyundai-IONIQ-5) (CC BY-SA 4.0,
+decoded from real 2022–2024 car captures), Esprit1st/Hyundai-Ioniq-5-Torque-Pro-PIDs and
+meatpiHQ/wican-fw. `Ioniq5ProfileTest` checks the formulas against OBDb's 2022 captures.
 
 | Signal | Module | Request | Formula |
 |---|---|---|---|
-| Tire pressure FL/FR/RL/RR | 7A0 (TPMS) | 22C00B | E/5, J/5, O/5, T/5 psi |
+| Tire pressure FL/FR/RL/RR | 7A0 (BCM/TPMS) | 22C00B | E/5, J/5, O/5, T/5 psi |
 | Tire temperature FL/FR/RL/RR | 7A0 | 22C00B | F-50, K-50, P-50, U-50 °C |
-| Steering angle | 730 | 22F010 | signed(N·256+M)/10 ° |
-| Vehicle speed, outside temp | 7B3 | 220100 | AD km/h, G/2-40 °C |
-| Odometer | 7C6 | 22B002 | G·65536+H·256+I km |
-| READY, HV current/voltage, motor RPM, 12 V | 7E4 (BMS) | 220101 | bit(AY,2), signed(K·256+L)/10 A, (M·256+N)/10 V, BB/BC, BD/BE, AD/10 |
+| Brake pedal switch | 7A0 | 22B008 | bit(G,4) |
+| Steering angle | 730 (chassis) | 22F010 | signed(N·256+M)/10 ° |
+| Wheel speeds FR/FL/RR/RL | 730 | 22F010 | (F·256+E)/32, (H·256+G)/32, (J·256+I)/32, (L·256+K)/32 km/h |
+| Lateral / longitudinal acceleration | 730 | 22F010 | (P·256+O), (R·256+Q) × 8.354/65535 − 4.177 m/s² |
+| Accelerator pedal | 7E2 (VCU) | 22E004 | (J·256+I)/512 % |
+| Vehicle speed, outside temp | 7B3 (HVAC) | 220100 | AD km/h, G/2-40 °C |
+| Odometer | 7C6 (cluster) | 22B002 | G·65536+H·256+I km, or J·65536+K·256+L mi (US cars fill only the miles field) |
+| READY (HV on) | 7E4 (BMS) | 220101 | inverter capacitor voltage AZ·256+BA above 100 V |
+| HV current/voltage, motor RPM, 12 V | 7E4 | 220101 | signed(K·256+L)/10 A, (M·256+N)/10 V, BB/BC, BD/BE, AD/10 |
 | State of charge | 7E4 | 220105 | AF/2 % |
+| Rear motor power | 7E3 (MCU) | 22E001 | signed(W·256+V)/10 N·m × signed(S·256+R) rpm × 2π/60 / 1000 kW |
+| Steering angle (fallback) | 7D4 (MDPS) | 220101 | signed(H·256+I)/10 ° |
 
-On an EV the big gauge's arc shows battery power (kW, green while regenerating), the engine-load gauge
-becomes battery SOC, and ENGINE ON/OFF becomes READY/OFF. Not in the published list: brake pressure
-and pedal, individual wheel speeds, turn signals, seatbelts and car-sensor acceleration, so those
-show N/A (G-force falls back to the phone). If steering reads left when turning right, flip the
-sign in the formula.
+On an EV the Drive page shows speed and power side by side. The power gauge's outer arc is battery
+power (cyan = traction, green = regen); two inner bands show the rear motor (torque × rpm from the
+motor controller) and the front motor. Only one motor controller is published, so front motor power
+is estimated as battery power minus rear (EST; 0 while the front motor isn't turning, and it includes
+heating/AC load). The engine-load gauge becomes battery SOC, and ENGINE ON/OFF becomes READY/OFF. Not in any public list: turn signals,
+seat belts and brake line pressure. Those are on the car's internal CAN-FD buses (which is how
+comma.ai reads them, from the camera harness) and may not be readable through the OBD gateway at
+all. The signal finder below is the way to find out.
+
+## Signal finder (experimental)
+
+Settings → Signal finder pauses the dashboard and uses the adapter directly:
+
+1. **Check profile** sends each profile request once and shows the raw reply, so an N/A gauge can be
+   traced to "no reply", a negative response (NRC) or a reply too short for the formula.
+2. **Scan ECUs** pings about 25 ECU addresses and reads ~100 DIDs (0100–010F, B001–B010, BC01–BC10,
+   C001–C00F, E001–E011, F010–F01F, plus extras) on each ECU that answers.
+3. **Watch** re-reads the body/chassis DIDs found while you tag what you are doing (left signal on,
+   driver belt buckled, brake pressed…). Changed bytes are listed live and every read goes to a CSV in
+   `Android/data/com.dreyev.vlink/files/signal-finder/`. **Share** sends it (and the latest trip log).
+
+## Theme
+
+Settings → Appearance: **System** (default, follows the phone's dark mode), **Dark** or **Light**.
+Saved across restarts. The Android Auto screen always uses the dark palette.
 
 ## Android Auto
 
