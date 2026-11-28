@@ -182,8 +182,8 @@ fun Gauge(
                 Text(unit, color = C.textMuted, fontSize = maxOf(9f, size.value * 0.068f).sp, fontWeight = FontWeight.Medium, maxLines = 1)
                 if (sub != null) Text(sub, color = C.textMuted, fontSize = maxOf(9f, size.value * 0.05f).sp, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
             }
-            Text(fmtScale(min), Modifier.align(Alignment.BottomStart).padding(start = size * 0.2f), color = Color(0xFF7D8A97), fontSize = 9.sp)
-            Text(fmtScale(max), Modifier.align(Alignment.BottomEnd).padding(end = size * 0.2f), color = Color(0xFF7D8A97), fontSize = 9.sp)
+            Text(fmtScale(min), Modifier.align(Alignment.BottomStart).padding(start = size * 0.2f), color = C.scaleText, fontSize = 9.sp)
+            Text(fmtScale(max), Modifier.align(Alignment.BottomEnd).padding(end = size * 0.2f), color = C.scaleText, fontSize = 9.sp)
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(label.uppercase(), color = C.textDim, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp, textAlign = TextAlign.Center, maxLines = 1)
@@ -303,7 +303,7 @@ fun SteeringWheel(deg: Double?, size: Dp = 120.dp) {
             drawLine(c, Offset(14f, 54f), Offset(40f, 54f), 7f, StrokeCap.Round)
             drawLine(c, Offset(60f, 54f), Offset(86f, 54f), 7f, StrokeCap.Round)
             drawLine(c, Offset(50f, 62f), Offset(50f, 86f), 7f, StrokeCap.Round)
-            drawCircle(Color(0xFF1C242D), 11f, Offset(50f, 54f))
+            drawCircle(C.hub, 11f, Offset(50f, 54f))
             drawCircle(c, 11f, Offset(50f, 54f), style = Stroke(3f))
             if (deg != null) drawLine(C.mfr, Offset(50f, 8f), Offset(50f, 20f), 5f, StrokeCap.Round)
         }
@@ -374,9 +374,9 @@ fun TrailView(points: List<Pair<Double, Double>>, modifier: Modifier = Modifier)
         // background "streets" grid for context
         val step = 40.dp.toPx()
         var x = step / 2
-        while (x < size.width) { drawLine(Color(0xFF1E2731), Offset(x, 0f), Offset(x + 12f, size.height), 6.dp.toPx()); x += step * 2 }
-        drawLine(Color(0xFF1E2731), Offset(0f, size.height * 0.33f), Offset(size.width, size.height * 0.4f), 6.dp.toPx())
-        drawLine(Color(0xFF1E2731), Offset(0f, size.height * 0.75f), Offset(size.width, size.height * 0.7f), 6.dp.toPx())
+        while (x < size.width) { drawLine(C.road, Offset(x, 0f), Offset(x + 12f, size.height), 6.dp.toPx()); x += step * 2 }
+        drawLine(C.road, Offset(0f, size.height * 0.33f), Offset(size.width, size.height * 0.4f), 6.dp.toPx())
+        drawLine(C.road, Offset(0f, size.height * 0.75f), Offset(size.width, size.height * 0.7f), 6.dp.toPx())
         if (points.isEmpty()) return@Canvas
         val last = points.last()
         // ~ 400 m across the box

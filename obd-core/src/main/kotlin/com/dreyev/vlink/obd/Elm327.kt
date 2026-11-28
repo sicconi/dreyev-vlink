@@ -14,6 +14,9 @@ sealed interface ObdResult {
     data class Failure(val reason: String) : ObdResult
 }
 
+/** Raw adapter text for one request plus the parsed result. */
+data class RawReply(val raw: String, val result: ObdResult)
+
 data class ElmInfo(val version: String, val protocol: String, val voltage: Double?)
 
 /**
@@ -61,7 +64,7 @@ class Elm327(
         // ATZ resets the chip; some clones take ~1 s and print the banner twice.
         val banner = try { rawCommand("ATZ", 4_000) } catch (_: ElmTimeoutException) { "" }
         delay(300)
-        for (c in listOf("ATE0", "ATL0", "ATS0", "ATH0", "ATCAF1", "ATAT1", "ATST64", "ATSP0")) {
+        for (c in listOf("ATE0", "ATL0", "ATS0", "ATH0", "ATCAF1", "ATAT1", "ATST96", "ATSP0")) {
             rawCommand(c, 2_000)
         }
         val version = rawCommand("ATI", 2_000).lines().map { it.trim() }
@@ -89,7 +92,15 @@ class Elm327(
         header: String? = null,
         prefix: String? = null,
         timeoutMs: Long = 1_500,
-    ): ObdResult = mutex.withLock {
+    ): ObdResult = queryRaw(request, header, prefix, timeoutMs).result
+
+    /** Like [query], but also returns the adapter's raw text (for the signal finder log). */
+    suspend fun queryRaw(
+        request: String,
+        header: String? = null,
+        prefix: String? = null,
+        timeoutMs: Long = 1_500,
+    ): RawReply = mutex.withLock {
         try {
             if (header != this.header) {
                 val target = header ?: if (isCan) "7DF" else "686AF1"
@@ -98,9 +109,9 @@ class Elm327(
                 this.header = header
             }
             val raw = rawCommand(request.replace(" ", ""), timeoutMs)
-            parse(raw, prefix ?: defaultPrefix(request))
+            RawReply(raw.trim().replace("\r", "|").replace("\n", "|"), parse(raw, prefix ?: defaultPrefix(request)))
         } catch (e: ElmTimeoutException) {
-            ObdResult.Failure("timeout")
+            RawReply("", ObdResult.Failure("timeout"))
         }
     }
 

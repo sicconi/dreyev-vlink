@@ -31,6 +31,7 @@ class TripRecorder(private val context: Context, private val store: VehicleStore
         val f = File(dir, "trip-" + SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date()) + ".csv")
         _file.value = f
         job = scope.launch(Dispatchers.IO) {
+          try {
             f.bufferedWriter().use { w ->
                 w.write(
                     "time_ms,speed_kmh,rpm,load_pct,pedal_pct,brake_on,brake_bar,steer_deg,long_g,long_src,lat_g,vert_g,speed_long_g," +
@@ -58,8 +59,16 @@ class TripRecorder(private val context: Context, private val store: VehicleStore
                     delay(200)
                 }
             }
+          } finally {
+            // Writer is closed here; put a copy where the user can find and attach it.
+            _lastSaved.value = Downloads.save(context, f)
+          }
         }
     }
+
+    private val _lastSaved = MutableStateFlow<String?>(null)
+    /** Downloads path of the last finished trip, for the UI. */
+    val lastSaved: StateFlow<String?> = _lastSaved
 
     fun stop() {
         job?.cancel(); job = null
