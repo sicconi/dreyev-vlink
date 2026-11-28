@@ -8,6 +8,7 @@ enum class MfrSignal(val id: String) {
     BRAKE_PEDAL("brakePedal"),             // boolean (non-zero = pressed)
     BRAKE_PRESSURE("brakePressure"),       // bar
     STEERING_ANGLE("steeringAngle"),       // degrees, + = right
+    STEERING_ANGLE_ALT("steeringAngleAlt"), // degrees; second source, used only while steeringAngle is missing
     WHEEL_SPEED_FL("wheelSpeedFL"), WHEEL_SPEED_FR("wheelSpeedFR"),   // km/h
     WHEEL_SPEED_RL("wheelSpeedRL"), WHEEL_SPEED_RR("wheelSpeedRR"),
     TIRE_PRESSURE_FL("tirePressureFL"), TIRE_PRESSURE_FR("tirePressureFR"), // kPa (gauge)

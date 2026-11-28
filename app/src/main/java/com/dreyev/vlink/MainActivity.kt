@@ -74,6 +74,7 @@ class MainActivity : ComponentActivity() {
             add(Manifest.permission.ACCESS_COARSE_LOCATION)
             if (Build.VERSION.SDK_INT >= 31) { add(Manifest.permission.BLUETOOTH_CONNECT); add(Manifest.permission.BLUETOOTH_SCAN) }
             if (Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
+            if (Build.VERSION.SDK_INT <= 28) add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
         }
         permissions.launch(needed.toTypedArray())
 

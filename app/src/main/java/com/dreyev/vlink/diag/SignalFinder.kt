@@ -38,6 +38,8 @@ data class FinderState(
     val changes: List<ByteChange> = emptyList(),
     val watchCount: Int = 0,
     val file: File? = null,
+    /** Where the log was copied for the user, e.g. "Downloads/dreyev-vlink/vlink-watch-….csv". */
+    val savedPath: String? = null,
     val error: String? = null,
 )
 
@@ -68,7 +70,7 @@ class SignalFinder(private val app: VLinkApp) {
             app.pauseLink()
             val transport = factory()
             try {
-                openLog()
+                openLog(mode)
                 transport.open()
                 val elm = Elm327(transport) { Log.d("VLinkFinder", it) }
                 val info = elm.initialize()
@@ -87,6 +89,8 @@ class SignalFinder(private val app: VLinkApp) {
                 _state.update { it.copy(error = e.message ?: e.javaClass.simpleName) }
             } finally {
                 out?.flush(); out?.close(); out = null
+                val saved = _state.value.file?.let { com.dreyev.vlink.data.Downloads.save(app, it) }
+                _state.update { it.copy(savedPath = saved) }
                 try { transport.close() } catch (_: Exception) {}
                 _state.update { it.copy(running = false) }
                 app.resumeLink()
@@ -137,12 +141,17 @@ class SignalFinder(private val app: VLinkApp) {
         }
     }
 
-    private fun openLog() {
+    private fun openLog(mode: Mode) {
         val dir = File(app.getExternalFilesDir(null) ?: app.filesDir, "signal-finder").apply { mkdirs() }
-        val f = File(dir, "vlink-finder-" + SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date()) + ".csv")
+        val kind = when (mode) { Mode.CHECK_PROFILE -> "check"; Mode.SCAN -> "scan"; Mode.WATCH -> "watch" }
+        val f = File(dir, "vlink-$kind-" + SimpleDateFormat("yyyyMMdd-HHmm", Locale.US).format(Date()) + ".csv")
         out = PrintWriter(f.bufferedWriter()).also { it.println(Prober.ProbeRow.CSV_HEADER) }
-        _state.update { it.copy(file = f) }
+        _state.update { it.copy(file = f, savedPath = null) }
     }
+
+    /** All finder logs from this app, newest first (so several runs can be sent together). */
+    fun allLogs(): List<File> =
+        File(app.getExternalFilesDir(null) ?: app.filesDir, "signal-finder").listFiles()?.sortedByDescending { it.lastModified() }.orEmpty()
 
     private fun log(line: String) { out?.println(line) }
 

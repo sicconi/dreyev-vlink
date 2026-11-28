@@ -19,6 +19,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Only Android 8–9 need this to copy logs into Downloads/dreyev-vlink -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
 
     <!-- Android Auto: full-screen drawing surface (navigation-category car app) -->
     <uses-permission android:name="androidx.car.app.NAVIGATION_TEMPLATES" />

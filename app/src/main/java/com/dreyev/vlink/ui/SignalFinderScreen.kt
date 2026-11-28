@@ -61,7 +61,9 @@ fun SignalFinderScreen(app: VLinkApp, onBack: () -> Unit) {
         }
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             StatusCard(st, onStop = { app.finder.stop() }, onShare = {
-                app.finder.share(context, listOfNotNull(st.file, app.finder.latestTrip()))
+                // Latest check + scan + watch logs and the latest trip, in one share.
+                val logs = app.finder.allLogs().groupBy { it.name.substringBefore("-2") }.values.map { it.first() }
+                app.finder.share(context, logs + listOfNotNull(app.finder.latestTrip()))
             })
 
             DashCard(Modifier.fillMaxWidth()) {
@@ -125,7 +127,7 @@ fun SignalFinderScreen(app: VLinkApp, onBack: () -> Unit) {
                 }
             }
             Text(
-                "Logs are saved as CSV in Android/data/com.dreyev.vlink/files/signal-finder. Use Share to send the latest log and trip to dreyev.",
+                "Every log is also copied to Downloads/dreyev-vlink on your phone when a run ends (tap Stop to end a watch). Trip recordings are copied there too.",
                 color = C.textFaint, fontSize = 11.sp, modifier = Modifier.padding(bottom = 24.dp),
             )
         }
@@ -135,18 +137,34 @@ fun SignalFinderScreen(app: VLinkApp, onBack: () -> Unit) {
 @Composable
 private fun StatusCard(st: FinderState, onStop: () -> Unit, onShare: () -> Unit) {
     DashCard(Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            Column(Modifier.weight(1f)) {
-                Text(if (st.running) st.step else if (st.step.isEmpty()) "Ready" else st.step, color = C.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                st.error?.let { Text(it, color = C.red, fontSize = 12.sp) }
-                st.file?.let { Text(it.name, color = C.textFaint, fontSize = 10.sp, fontFamily = MonoFont) }
-            }
-            if (st.running) ActionButton("Stop", C.red, onStop) else if (st.file != null) ActionButton("Share", C.obd, onShare)
-        }
+        Text(if (st.running) st.step else if (st.step.isEmpty()) "Ready" else st.step, color = C.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        st.error?.let { Text(it, color = C.red, fontSize = 12.sp) }
         if (st.running) {
             Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(C.track)) {
                 Box(Modifier.fillMaxWidth(st.progress.coerceIn(0.02f, 1f)).height(6.dp).clip(RoundedCornerShape(3.dp)).background(C.obd))
             }
+            ActionButton("Stop and save log", C.red, onStop)
+        } else if (st.file != null) {
+            Text(
+                st.savedPath?.let { "Log saved to $it" } ?: "Log saved in the app (${st.file.name}). Use Send logs below.",
+                color = C.green, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
+            )
         }
+        SendLogsButton(enabled = !st.running, onShare)
+        Text(
+            "Send logs opens your phone's share menu with the latest check, scan and watch logs plus your latest trip. " +
+                "Pick Save to Drive, email or Files, or attach them from Downloads/dreyev-vlink in the Claude app.",
+            color = C.textFaint, fontSize = 11.sp,
+        )
     }
+}
+
+@Composable
+private fun SendLogsButton(enabled: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(24.dp))
+            .background(if (enabled) C.obd else C.track)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { Text("Send logs", color = if (enabled) C.card else C.textFaint, fontSize = 15.sp, fontWeight = FontWeight.Bold) }
 }

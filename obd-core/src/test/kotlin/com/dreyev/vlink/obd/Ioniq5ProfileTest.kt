@@ -88,6 +88,13 @@ class Ioniq5ProfileTest {
         assertEquals(0.03461 / 9.80665, value(MfrSignal.ACCEL_LONG, b), 1e-5)
     }
 
+    @Test fun steeringFromMdpsCapture() {
+        val b = fromCan("7DC1016620101FFF800", "7DC21007E7CFFFFC9FF", "7DC22FC012401651010", "7DC232701AAAAAAAAAA")
+        assertEquals(-5.5, value(MfrSignal.STEERING_ANGLE_ALT, b), 1e-6)
+        val c = fromCan("7DC1016620101FFF800", "7DC21007D7C000013FF", "7DC22F4FE67040A1010", "7DC232701AAAAAAAAAA")
+        assertEquals(1.9, value(MfrSignal.STEERING_ANGLE_ALT, c), 1e-6)
+    }
+
     @Test fun odometerInMilesOnUsCars() {
         // US cars leave the km field at 0 and fill the miles field.
         val b = fromCan("7CE 10 0F 62 B0 02 D0 00 00", "7CE 21 00 FF AE 00 00 00 01", "7CE 22 B0 70 AA AA AA AA AA")

@@ -16,6 +16,7 @@
     { "signal": "tireTempRR",     "header": "7A0", "request": "22C00B", "formula": "U-50", "unit": "C",   "intervalMs": 5000 },
 
     { "signal": "steeringAngle",  "header": "730", "request": "22F010", "formula": "signed(N*256+M,16)/10", "unit": "deg", "intervalMs": 150 },
+    { "signal": "steeringAngleAlt", "header": "7D4", "request": "220101", "formula": "signed(H*256+I,16)/10", "unit": "deg", "intervalMs": 200 },
     { "signal": "wheelSpeedFR",   "header": "730", "request": "22F010", "formula": "(F*256+E)/32", "unit": "km/h", "intervalMs": 150 },
     { "signal": "wheelSpeedFL",   "header": "730", "request": "22F010", "formula": "(H*256+G)/32", "unit": "km/h", "intervalMs": 150 },
     { "signal": "wheelSpeedRR",   "header": "730", "request": "22F010", "formula": "(J*256+I)/32", "unit": "km/h", "intervalMs": 150 },
