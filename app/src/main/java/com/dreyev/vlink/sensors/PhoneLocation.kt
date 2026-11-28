@@ -21,8 +21,14 @@ class PhoneLocation(context: Context, private val store: VehicleStore) {
     private var lastT = 0L
     private var running = false
 
-    /** Recent positions for the breadcrumb trail on the GPS card. */
+    /**
+     * Positions driven this session, for the map trace. A point is added once the car has moved
+     * at least [MIN_STEP_M] from the previous one; the oldest points drop after [MAX_POINTS].
+     */
     val trail = ArrayDeque<Pair<Double, Double>>()
+
+    /** Forget the trace (Map tab "Clear"). */
+    fun clearTrail() = trail.clear()
 
     private val listener = LocationListener { loc -> onLocation(loc) }
 
@@ -59,8 +65,11 @@ class PhoneLocation(context: Context, private val store: VehicleStore) {
             if (prev != null && dt in 0.2..3.0) accel = (kmh - prev) / 3.6 / dt
             lastSpeed = kmh; lastT = t
         }
-        trail.addLast(l.latitude to l.longitude)
-        while (trail.size > 300) trail.removeFirst()
+        val prev = trail.lastOrNull()
+        if (prev == null || distanceM(prev.first, prev.second, l.latitude, l.longitude) >= MIN_STEP_M) {
+            trail.addLast(l.latitude to l.longitude)
+            while (trail.size > MAX_POINTS) trail.removeFirst()
+        }
         val fix = GpsFix(
             lat = l.latitude, lon = l.longitude,
             altitudeM = if (l.hasAltitude()) l.altitude else null,
@@ -75,5 +84,21 @@ class PhoneLocation(context: Context, private val store: VehicleStore) {
                 gpsAccelMs2 = accel?.let { a -> Reading(a, Source.PHONE, "GNSS", t) } ?: it.gpsAccelMs2,
             )
         }
+    }
+
+    companion object {
+        const val MIN_STEP_M = 3.0
+        const val MAX_POINTS = 20_000   // ≥ 60 km of trace
+
+        /** Equirectangular distance; plenty for points a few meters apart. */
+        fun distanceM(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+            val x = Math.toRadians(lon2 - lon1) * Math.cos(Math.toRadians((lat1 + lat2) / 2))
+            val y = Math.toRadians(lat2 - lat1)
+            return Math.sqrt(x * x + y * y) * 6_371_000.0
+        }
+
+        /** Length of a trace in meters. */
+        fun lengthM(points: List<Pair<Double, Double>>): Double =
+            points.zipWithNext { a, b -> distanceM(a.first, a.second, b.first, b.second) }.sum()
     }
 }

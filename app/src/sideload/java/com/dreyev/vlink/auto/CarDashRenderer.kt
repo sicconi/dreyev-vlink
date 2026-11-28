@@ -21,7 +21,7 @@ import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
 
-enum class CarPage(val title: String) { DRIVE("Drive"), TIRES("Tires"), VEHICLE("Vehicle") }
+enum class CarPage(val title: String) { DRIVE("Drive"), TIRES("Tires"), VEHICLE("Vehicle"), MAP("Map") }
 
 /**
  * Draws the dashboard on the Android Auto map surface with plain android.graphics, so the
@@ -60,6 +60,7 @@ class CarDashRenderer {
             CarPage.DRIVE -> drive(c, s, u)
             CarPage.TIRES -> tires(c, s, u)
             CarPage.VEHICLE -> vehicle(c, s, u, trail)
+            CarPage.MAP -> mapFallback(c, s, u, trail)
         }
         c.restore()
     }
@@ -431,6 +432,17 @@ class CarDashRenderer {
             val p = Path().apply { moveTo(cx, cy - r * 0.7f); lineTo(cx + r * 0.2f, cy + r * 0.1f); lineTo(cx, cy); lineTo(cx - r * 0.2f, cy + r * 0.1f); close() }
             fill.color = K.phone; c.drawPath(p, fill); c.restore()
         }
+    }
+
+    // ---------------- map (fallback when the Google map can't attach) ----------------
+    private fun mapFallback(c: Canvas, s: VehicleState, u: UnitPrefs, trail: List<Pair<Double, Double>>) {
+        card(c, 20f, 90f, 1160f, 440f)
+        val box = RectF(36f, 106f, 1164f, 514f)
+        fill.color = K.inner; c.drawRoundRect(box, 14f, 14f, fill)
+        drawTrail(c, box, trail)
+        val speed = (s.speedKmh?.value ?: s.gps?.value?.speedKmh)?.let { u.fmtSpeed(it) + " " + u.speedUnit } ?: "N/A"
+        text(c, speed, 56f, 156f, 34f, K.text, bold)
+        text(c, "Offline trace (Google map unavailable)", 56f, 186f, 15f, K.faint)
     }
 
     private fun kv(c: Canvas, k: String, v: String, x: Float, y: Float) {

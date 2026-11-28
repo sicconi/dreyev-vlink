@@ -36,6 +36,7 @@ class CarScreenshotTest {
 
     @Test fun carDrive() = car(CarPage.DRIVE, TestStates.simulated())
     @Test fun carTires() = car(CarPage.TIRES, TestStates.simulated())
+    @Test fun carMap() = car(CarPage.MAP, TestStates.simulated())
     @Test fun carVehicle() = car(CarPage.VEHICLE, TestStates.simulated())
     @Test fun carDriveIoniq5() = car(CarPage.DRIVE, TestStates.ev(TestStates.simulated()))
     @Test fun carVehicleIoniq5() = car(CarPage.VEHICLE, TestStates.ev(TestStates.simulated()))
