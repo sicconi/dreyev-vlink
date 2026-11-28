@@ -1,28 +1,69 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
-    // Renders the dashboard screens to PNG on the JVM (no emulator): ./gradlew :app:recordPaparazziDebug
+    // Renders the dashboard screens to PNG on the JVM (no emulator): ./gradlew :app:recordPaparazziSideloadDebug
     id("app.cash.paparazzi")
 }
 
+// Upload key for Google Play. Never committed: it lives in keystore.properties (git-ignored)
+// next to the .jks file, or in the VLINK_* environment variables. See docs/play-store/RELEASE.md.
+val keystoreProps = Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+fun signingValue(key: String, env: String): String? = keystoreProps.getProperty(key) ?: System.getenv(env)
+val uploadStoreFile = signingValue("storeFile", "VLINK_UPLOAD_STORE_FILE")
+
 android {
     namespace = "com.dreyev.vlink"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
+        // Final Play package name. It can never change once the app is on Play.
         applicationId = "com.dreyev.vlink"
         minSdk = 26
-        targetSdk = 35
+        // Google Play requires API 36 for new apps and updates since Aug 31, 2026.
+        targetSdk = 36
+        // Bump versionCode by 1 for every upload to Play; versionName is what users see.
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "1.0.0"
+    }
+
+    signingConfigs {
+        if (uploadStoreFile != null) {
+            create("upload") {
+                storeFile = rootProject.file(uploadStoreFile)
+                storePassword = signingValue("storePassword", "VLINK_UPLOAD_STORE_PASSWORD")
+                keyAlias = signingValue("keyAlias", "VLINK_UPLOAD_KEY_ALIAS")
+                keyPassword = signingValue("keyPassword", "VLINK_UPLOAD_KEY_PASSWORD")
+            }
+        }
+    }
+
+    flavorDimensions += "store"
+    productFlavors {
+        // Google Play build: phone app only. Android Auto is left out (see app/src/sideload).
+        create("play") {
+            dimension = "store"
+        }
+        // Personal build with the Android Auto module, installed by hand (AA developer mode).
+        // Different package so it can sit next to the Play install.
+        create("sideload") {
+            dimension = "store"
+            applicationIdSuffix = ".sideload"
+            versionNameSuffix = "-aa"
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            // Signed with the debug key so the APK can be sideloaded for testing.
-            signingConfig = signingConfigs.getByName("debug")
+            // Signed with the upload key when one is configured; otherwise the release output is
+            // unsigned and Play will refuse it (debug builds are unaffected).
+            signingConfig = signingConfigs.findByName("upload")
         }
     }
     compileOptions {
@@ -41,7 +82,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-service:2.8.7")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
-    implementation("androidx.car.app:app:1.7.0")
+    "sideloadImplementation"("androidx.car.app:app:1.7.0")
 
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.compose.ui:ui")
