@@ -153,7 +153,7 @@ private fun StatusCard(st: FinderState, onStop: () -> Unit, onShare: () -> Unit)
         SendLogsButton(enabled = !st.running, onShare)
         Text(
             "Send logs opens your phone's share menu with the latest check, scan and watch logs plus your latest trip. " +
-                "Pick Save to Drive, email or Files, or attach them from Downloads/dreyev-vlink in the Claude app.",
+                "Pick Save to Drive, email or Files, or find them later in Downloads/dreyev-vlink.",
             color = C.textFaint, fontSize = 11.sp,
         )
     }

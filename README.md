@@ -41,12 +41,18 @@ All values are stored metric internally.
 
 ## Build
 
-Requires JDK 17+ and the Android SDK (platform 35).
+Requires JDK 17+ and the Android SDK (platform 36).
+
+Two flavors: `play` (`com.dreyev.vlink`, the Google Play phone app, no Android Auto) and
+`sideload` (`com.dreyev.vlink.sideload`, "dreyev VLink AA", adds the Android Auto module from
+`app/src/sideload`). Releasing to Play: see [docs/play-store/RELEASE.md](docs/play-store/RELEASE.md).
 
 ```
-./gradlew :app:assembleDebug                 # APK → app/build/outputs/apk/debug/
+./gradlew :app:assemblePlayDebug             # phone app APK → app/build/outputs/apk/play/debug/
+./gradlew :app:assembleSideloadDebug         # phone + Android Auto APK
+./gradlew :app:bundlePlayRelease             # signed AAB for Google Play (needs your upload key)
 ./gradlew -PcoreOnly=true :obd-core:test     # data-layer tests, no Android SDK needed
-./gradlew :app:recordPaparazziDebug          # render screens to app/src/test/snapshots/images
+./gradlew :app:recordPaparazziSideloadDebug  # render phone + car screens to app/src/test/snapshots/images
 ```
 
 ## Petrol/diesel vs electric
