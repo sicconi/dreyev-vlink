@@ -6,3 +6,8 @@ local.properties
 .DS_Store
 captures/
 .kotlin/
+
+# Release signing: keep the upload key and its passwords out of git
+keystore.properties
+*.jks
+*.keystore
