@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
 /**
  * App-wide objects. The data layer lives here (not in an Activity) so it survives
  * rotation, keeps running in the foreground service, and can be shared with the
- * Android Auto module later.
+ * Android Auto car screen.
  */
 class VLinkApp : Application() {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -76,7 +76,19 @@ class VLinkApp : Application() {
         simulated = false
         scope.launch { settingsRepo.setDevice(device) }
         connection.start({ if (device.kind == LinkKind.BLE) BleTransport(this, bt) else SppTransport(bt) })
-        ContextCompat.startForegroundService(this, Intent(this, ObdService::class.java))
+        try {
+            ContextCompat.startForegroundService(this, Intent(this, ObdService::class.java))
+        } catch (e: IllegalStateException) {
+            // Android 12+ can refuse a foreground start from the background; the link still runs.
+            Log.w("VLink", "foreground service not started", e)
+        }
+    }
+
+    /** Connect to the last used adapter, if any, unless a connection is already running. */
+    fun autoConnect() {
+        if (isConnectionRunning) return
+        val saved = settings.value.device ?: return
+        if (scanner.isEnabled) connect(saved)
     }
 
     fun startDemo() {
