@@ -35,7 +35,16 @@ keyPassword=…
 
 Or set the environment variables `VLINK_UPLOAD_STORE_FILE`, `VLINK_UPLOAD_STORE_PASSWORD`, `VLINK_UPLOAD_KEY_ALIAS`, `VLINK_UPLOAD_KEY_PASSWORD` (handy for CI). Without either, release builds come out unsigned and Play rejects them.
 
-## 3. Build the bundle
+## 3. Google Maps key for release builds
+
+The release AAB needs `MAPS_API_KEY` in `local.properties` (or the environment), like debug builds; without it the map shows a "needs a key" placeholder. In Google Cloud Console, restrict the key to **Maps SDK for Android** and to these apps:
+
+* package `com.dreyev.vlink` + the SHA-1 of Google's **app signing key** (Play Console › Test and release › App integrity › App signing). Play re-signs your upload, so the upload key's SHA-1 alone won't work for users who install from Play.
+* package `com.dreyev.vlink` + your upload key's SHA-1, and `com.dreyev.vlink.sideload` + the SHA-1 you sign the AA build with, for your own installs.
+
+`keytool -list -v -keystore ~/keys/dreyev-vlink-upload.jks -alias upload` prints the upload key's SHA-1.
+
+## 4. Build the bundle
 
 ```
 ./gradlew :app:bundlePlayRelease
@@ -45,7 +54,7 @@ Upload `app/build/outputs/bundle/playRelease/app-play-release.aab` in Play Conso
 
 Check it's signed: `jarsigner -verify app/build/outputs/bundle/playRelease/app-play-release.aab` should print `jar verified.`
 
-## 4. Every later update
+## 5. Every later update
 
 1. Raise `versionCode` by 1 in `app/build.gradle.kts` (Play refuses a code it has seen). Change `versionName` (shown to users) as you like.
 2. `./gradlew :app:bundlePlayRelease` and upload.
@@ -67,6 +76,6 @@ The Play app and the AA build have different package names, so both can be insta
 
 * `docs/play-store/graphics/icon-512.png`: Play icon (512×512)
 * `docs/play-store/graphics/feature-graphic-1024x500.png`: feature graphic
-* `docs/play-store/screenshots/*.png`: phone screenshots, 500×1000 (2:1), rendered from the real UI with simulated data. Regenerate with
+* `docs/play-store/screenshots/*.png`: phone screenshots, 500×1000 (2:1), rendered from the real UI with simulated data. The Map and Vehicle & GPS tabs aren't included (the renderer can't draw Google Maps); capture those on your phone. Regenerate with
   `VLINK_STORE_SHOTS=1 ./gradlew :app:testPlayDebugUnitTest --tests '*StoreScreenshotTest'`.
   Real screenshots from your phone (Power + Volume down) look sharper and are just as valid.

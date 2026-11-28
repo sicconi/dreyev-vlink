@@ -13,7 +13,7 @@ Paste these where Play Console asks, and use them in the privacy policy.
 | `FOREGROUND_SERVICE_LOCATION` | Keep phone GPS readings going during that same user-started session (speed comparison, trace, trip logs). |
 | `POST_NOTIFICATIONS` | Show the required "connected to adapter" notification for the foreground service. |
 | `WRITE_EXTERNAL_STORAGE` (Android 8–9 only, `maxSdkVersion 28`) | Copy trip and signal-finder logs to Downloads/dreyev-vlink. Android 10+ uses MediaStore and needs no storage permission. |
-| `INTERNET` (only once the map tab ships) | Load Google Maps tiles for the map. |
+| `INTERNET`, `ACCESS_NETWORK_STATE` | Load Google Maps tiles for the Map tab and the GPS card, and show a placeholder when offline. The app has no other network use. |
 
 The app does **not** request `ACCESS_BACKGROUND_LOCATION`, contacts, camera, microphone, or broad storage access.
 
@@ -36,12 +36,12 @@ Play asks for a short video link for each. Record a 30-second screen capture (De
 
 Play defines "collected" as data sent off the device. Data that stays on the phone (settings, logs in Downloads, the VIN) is not collected. Android's own backup to the user's Google account is also exempt.
 
-### Version 1 (no map, no INTERNET permission)
+### Without the map (builds before the Maps tab, kept for reference)
 
 * Does your app collect or share any of the required user data types? **No**
 * That's the whole form. Play then shows "No data collected" and "No data shared".
 
-### Once the Google Maps tab ships (INTERNET + Maps SDK)
+### Current app, with Google Maps (use this)
 
 Google's Maps SDK sends requests to Google that reveal the map area being viewed, and Google's SDK disclosure lists data it handles. Answer:
 
@@ -53,7 +53,7 @@ Google's Maps SDK sends requests to Google that reveal the map area being viewed
   * **App info and performance › Crash logs / Diagnostics**: only if the Maps SDK version you ship says so in Google's "Maps SDK for Android data disclosure"; check that page when the map lands.
 * Precise location: **not** collected or shared (the trace is drawn on the phone; only map tiles are fetched).
 
-Update `docs/privacy-policy.html` at the same time (it already has a Google Maps section).
+`docs/privacy-policy.html` already covers Google Maps.
 
 ## Other App content answers
 

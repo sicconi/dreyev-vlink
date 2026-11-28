@@ -18,6 +18,7 @@ WHAT YOU SEE
 • Drive: speed, RPM or electric power, pedal position, engine load, brake pressure, steering angle and g-force
 • Tires & chassis: pressure and temperature for each tire, wheel speeds, brake pedal
 • Vehicle & GPS: VIN, odometer, outside temperature, drive state, and phone GPS
+• Map: a full-screen Google map with your drive trace
 • Portrait and landscape layouts, dark and light themes
 
 ELECTRIC CARS
@@ -33,7 +34,7 @@ TRIP AND SIGNAL LOGS
 Record trips to CSV and use the built-in signal finder to explore your car's data. Logs are saved to Downloads/dreyev-vlink on your phone, and you choose whether to share them.
 
 PRIVATE BY DESIGN
-No account, no ads and no analytics. Your car's data stays on your phone.
+No account, no ads and no analytics. Your car's data stays on your phone. The map is loaded from Google Maps.
 
 WHAT YOU NEED
 • A VLink or other ELM327-compatible OBD-II adapter (Bluetooth Classic or BLE)
@@ -62,7 +63,7 @@ dreyev VLink is not affiliated with Vgate, Hyundai, or any car maker.
 |---|---|---|
 | App icon | `graphics/icon-512.png` | 512×512 PNG |
 | Feature graphic | `graphics/feature-graphic-1024x500.png` | 1024×500 PNG/JPEG |
-| Phone screenshots | `screenshots/01…06*.png` | 2–8 images, 320–3840 px, max 2:1 |
+| Phone screenshots | `screenshots/01…05*.png`, plus the Map and Vehicle & GPS tabs captured on your phone | 2–8 images, 320–3840 px, max 2:1 |
 
 ## App access (for reviewers)
 

@@ -64,7 +64,8 @@ private fun storeImageWriter(dir: File): SnapshotHandler {
 /**
  * Google Play store screenshots in a 2:1 phone frame. Paparazzi caps output at 1000 px, so they
  * come out 500×1000 (Play accepts 320–3840 px, at most 2:1); real phone screenshots look sharper.
- * Not part of the normal snapshot check; regenerate with
+ * The Vehicle and Map tabs are left out: Paparazzi can't draw Google Maps, so take those two on
+ * the phone. Not part of the normal snapshot check; regenerate with
  *   VLINK_STORE_SHOTS=1 ./gradlew :app:testPlayDebugUnitTest --tests '*StoreScreenshotTest'
  * and the PNGs land in docs/play-store/screenshots/.
  */
@@ -104,10 +105,9 @@ class StoreScreenshotTest {
     @Test fun store1DriveEv() = screen(Tab.DRIVE, TestStates.ev(TestStates.simulated()))
     @Test fun store2Drive() = screen(Tab.DRIVE, TestStates.simulated())
     @Test fun store3Tires() = screen(Tab.TIRES, TestStates.simulated())
-    @Test fun store4Vehicle() = screen(Tab.VEHICLE, TestStates.ev(TestStates.simulated()))
-    @Test fun store5DriveLight() = screen(Tab.DRIVE, TestStates.simulated(), ThemeMode.LIGHT)
+    @Test fun store4DriveLight() = screen(Tab.DRIVE, TestStates.simulated(), ThemeMode.LIGHT)
 
-    @Test fun store6Landscape() {
+    @Test fun store5Landscape() {
         paparazzi.unsafeUpdateConfig(phone.copy(orientation = ScreenOrientation.LANDSCAPE, screenWidth = 2160, screenHeight = 1080))
         val s = TestStates.ev(TestStates.simulated())
         paparazzi.snapshot { VLinkTheme { Box(Modifier.fillMaxSize().background(C.bg)) { DriveLandscape(s, UnitPrefs()) } } }
