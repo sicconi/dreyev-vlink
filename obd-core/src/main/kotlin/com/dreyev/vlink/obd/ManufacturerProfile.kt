@@ -25,7 +25,8 @@ enum class MfrSignal(val id: String) {
     // Electric vehicles
     READY("ready"),                                                       // boolean: car is on / ready to drive
     MOTOR_RPM_FRONT("motorRpmFront"), MOTOR_RPM_REAR("motorRpmRear"),     // rpm
-    BATTERY_SOC("batterySoc"),                                            // % (dashboard SOC)
+    BATTERY_SOC("batterySoc"),
+    REAR_MOTOR_POWER("rearMotorPower"),                                   // kW, + traction / − regen                                            // % (dashboard SOC)
     BATTERY_CURRENT("batteryCurrent"),                                    // A, + = discharging
     BATTERY_VOLTAGE("batteryVoltage"),                                    // V
     AUX_BATTERY_VOLTAGE("auxBatteryVoltage");                             // V (12 V battery)
@@ -51,7 +52,7 @@ data class MfrPid(
     val intervalMs: Long = 500,
 ) {
     fun toMetric(v: Double): Double = when (unit?.lowercase()) {
-        null, "", "bar", "kpa", "c", "°c", "km/h", "kmh", "deg", "g", "km", "bool", "%", "rpm", "a", "v" -> v
+        null, "", "bar", "kpa", "c", "°c", "km/h", "kmh", "deg", "g", "km", "bool", "%", "rpm", "a", "v", "kw" -> v
         "psi" -> if (signal.id.startsWith("tirePressure")) v / 0.1450377 else v / 14.50377
         "mbar" -> if (signal.id.startsWith("tirePressure")) v / 10.0 else v / 1000.0
         "f", "°f" -> (v - 32.0) * 5.0 / 9.0

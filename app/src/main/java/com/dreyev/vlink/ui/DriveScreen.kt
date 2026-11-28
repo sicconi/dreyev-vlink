@@ -77,6 +77,20 @@ fun LoadOrSocGauge(s: VehicleState, size: androidx.compose.ui.unit.Dp) {
 @Composable
 fun DriveScreen(s: VehicleState, u: UnitPrefs, now: Long) {
     Column(Modifier.fillMaxWidth()) {
+        if (s.isEv) {
+            // EV: signals and belts in a slim row, then speed and power side by side.
+            Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) { TurnArrow(true, s.turnLeft?.value); SrcText(s.turnLeft) }
+                Box(Modifier.padding(start = 8.dp)) { BeltStatus(s.beltDriver?.value, false, s.beltDriver) }
+                androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                Box(Modifier.padding(end = 8.dp)) { BeltStatus(s.beltPassenger?.value, true, s.beltPassenger) }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) { TurnArrow(false, s.turnRight?.value); SrcText(s.turnRight) }
+            }
+            Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                EvSpeedGauge(s, u, 172.dp)
+                PowerGauge(s, 172.dp, now)
+            }
+        } else
         // Hero gauge with turn signals and seatbelts around it
         Box(Modifier.fillMaxWidth().padding(top = 2.dp), contentAlignment = Alignment.TopCenter) {
             HeroGauge(s, u, 240.dp)

@@ -40,6 +40,8 @@
     { "signal": "motorRpmFront",  "header": "7E4", "request": "220101", "formula": "signed(BD*256+BE,16)", "unit": "rpm", "intervalMs": 400 },
     { "signal": "auxBatteryVoltage", "header": "7E4", "request": "220101", "formula": "AD/10", "unit": "V", "intervalMs": 400 },
 
+    { "signal": "rearMotorPower", "header": "7E3", "request": "22E001", "formula": "signed(W*256+V,16)/10*signed(S*256+R,16)*0.000104719755", "unit": "kW", "intervalMs": 400 },
+
     { "signal": "batterySoc",     "header": "7E4", "request": "220105", "formula": "AF/2", "unit": "%", "intervalMs": 10000 }
   ]
 }

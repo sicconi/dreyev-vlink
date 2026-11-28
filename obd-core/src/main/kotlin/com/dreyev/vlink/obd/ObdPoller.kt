@@ -280,6 +280,7 @@ class ObdPoller(
             MfrSignal.READY -> store.update { it.copy(engine = Reading(if (v != 0.0) EngineState.ON else EngineState.OFF, Source.MFR, "READY", t)) }
             MfrSignal.MOTOR_RPM_FRONT -> store.update { it.copy(motorRpmFront = num()) }
             MfrSignal.MOTOR_RPM_REAR -> store.update { it.copy(motorRpmRear = num()) }
+            MfrSignal.REAR_MOTOR_POWER -> store.update { it.copy(rearMotorKw = num()) }
             MfrSignal.BATTERY_SOC -> store.update { it.copy(socPct = num()) }
             MfrSignal.BATTERY_CURRENT -> store.update { s ->
                 val p = s.hvVoltageV?.let { u -> Reading(u.value * v / 1000.0, Source.MFR, tag, t) }

@@ -95,6 +95,15 @@ class Ioniq5ProfileTest {
         assertEquals(1.9, value(MfrSignal.STEERING_ANGLE_ALT, c), 1e-6)
     }
 
+    @Test fun rearMotorPowerFromMcuCapture() {
+        // 266.2 N·m at 2,092 rpm → 58.3 kW (OBDb 2022 capture, 30-frame reply)
+        val lines = """7EB10CB62E001FFFFFF 7EB21FF6001B977CA37 7EB2200580E31056D39 7EB232C08660A660A91
+            7EB2406F700BAFFFBFF 7EB25FDFFFAFFCDAB18 7EB2609053505CB0EB2 7EB270AC2CD19006AFA
+            7EB28050004FC6CFEC1 7EB29CDF1034EFCC1CD 7EB2AE5030D01000000""".split(Regex("\\s+")).filter { it.isNotBlank() }
+        val b = fromCan(*(lines + List(19) { "7EB2" + "0".repeat(15) }).toTypedArray())
+        assertEquals(266.2 * 2092 * 2 * Math.PI / 60 / 1000, value(MfrSignal.REAR_MOTOR_POWER, b), 0.01)
+    }
+
     @Test fun odometerInMilesOnUsCars() {
         // US cars leave the km field at 0 and fill the miles field.
         val b = fromCan("7CE 10 0F 62 B0 02 D0 00 00", "7CE 21 00 FF AE 00 00 00 01", "7CE 22 B0 70 AA AA AA AA AA")

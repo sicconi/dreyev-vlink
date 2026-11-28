@@ -83,9 +83,14 @@ meatpiHQ/wican-fw. `Ioniq5ProfileTest` checks the formulas against OBDb's 2022 c
 | READY (HV on) | 7E4 (BMS) | 220101 | inverter capacitor voltage AZ·256+BA above 100 V |
 | HV current/voltage, motor RPM, 12 V | 7E4 | 220101 | signed(K·256+L)/10 A, (M·256+N)/10 V, BB/BC, BD/BE, AD/10 |
 | State of charge | 7E4 | 220105 | AF/2 % |
+| Rear motor power | 7E3 (MCU) | 22E001 | signed(W·256+V)/10 N·m × signed(S·256+R) rpm × 2π/60 / 1000 kW |
+| Steering angle (fallback) | 7D4 (MDPS) | 220101 | signed(H·256+I)/10 ° |
 
-On an EV the big gauge's arc shows battery power (kW, green while regenerating), the engine-load gauge
-becomes battery SOC, and ENGINE ON/OFF becomes READY/OFF. Not in any public list: turn signals,
+On an EV the Drive page shows speed and power side by side. The power gauge's outer arc is battery
+power (cyan = traction, green = regen); two inner bands show the rear motor (torque × rpm from the
+motor controller) and the front motor. Only one motor controller is published, so front motor power
+is estimated as battery power minus rear (EST; 0 while the front motor isn't turning, and it includes
+heating/AC load). The engine-load gauge becomes battery SOC, and ENGINE ON/OFF becomes READY/OFF. Not in any public list: turn signals,
 seat belts and brake line pressure. Those are on the car's internal CAN-FD buses (which is how
 comma.ai reads them, from the camera harness) and may not be readable through the OBD gateway at
 all. The signal finder below is the way to find out.

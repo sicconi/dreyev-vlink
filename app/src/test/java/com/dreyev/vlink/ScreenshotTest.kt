@@ -57,6 +57,10 @@ class ScreenshotTest {
         val demo = ManufacturerProfile.fromJson(SimulatedElm327.DEMO_PROFILE_JSON)
         val job = launch(Dispatchers.Default) { ObdPoller(Elm327(sim), store, sim.name, sim.kind, true, { _ -> demo }).run() }
         delay(3_500)
+        // Wait for powertrain detection too, so the Vehicle card's "Detected:" line is always there
+        // (it raced the fixed delay and made vehiclePortrait flaky).
+        val until = System.currentTimeMillis() + 8_000
+        while (store.state.value.powertrainNote == null && System.currentTimeMillis() < until) delay(100)
         job.cancel()
         val t = System.currentTimeMillis()
         store.update {
@@ -109,6 +113,8 @@ class ScreenshotTest {
             engine = Reading(com.dreyev.vlink.obd.EngineState.ON, Source.MFR, "READY", t),
             socPct = Reading(78.5, Source.MFR, "7E4", t), hvVoltageV = Reading(712.0, Source.MFR, "7E4", t),
             hvCurrentA = Reading(64.0, Source.MFR, "7E4", t), hvPowerKw = Reading(45.6, Source.MFR, "7E4", t),
+            rearMotorKw = Reading(36.0, Source.MFR, "7E3", t),
+            motorRpmRear = Reading(4200.0, Source.MFR, "7E4", t), motorRpmFront = Reading(4180.0, Source.MFR, "7E4", t),
             speedKmh = s.speedKmh?.copy(source = Source.MFR, tag = "7B3"),
             tires = s.tires.mapValues { (_, ts) -> ts.copy(wheelSpeedKmh = null, caliperForceKn = null) },
         )
@@ -125,6 +131,29 @@ class ScreenshotTest {
                 }
             }
         }
+    }
+
+    @Test fun driveIoniq5Regen() {
+        val t = System.currentTimeMillis()
+        val s = ev(simulatedState()).copy(
+            hvPowerKw = Reading(-38.0, Source.MFR, "7E4", t), rearMotorKw = Reading(-30.0, Source.MFR, "7E3", t),
+            motorRpmFront = Reading(0.0, Source.MFR, "7E4", t),
+        )
+        paparazzi.snapshot {
+            VLinkTheme {
+                Column(Modifier.fillMaxSize().background(C.bg)) {
+                    ScreenHeader("VLink connected", "Bluetooth Classic · ELM327 · 14 Hz", C.green, {}) { EnginePill(s) }
+                    Box(Modifier.fillMaxWidth().weight(1f)) { DriveScreen(s, UnitPrefs(), t) }
+                    BottomTabs(Tab.entries, Tab.DRIVE) {}
+                }
+            }
+        }
+    }
+
+    @Test fun driveLandscapeIoniq5() {
+        paparazzi.unsafeUpdateConfig(DeviceConfig.PIXEL_5.copy(orientation = ScreenOrientation.LANDSCAPE))
+        val s = ev(simulatedState())
+        paparazzi.snapshot { VLinkTheme { Box(Modifier.fillMaxSize().background(C.bg)) { DriveLandscape(s, UnitPrefs()) } } }
     }
 
     @Test fun driveLandscape() {

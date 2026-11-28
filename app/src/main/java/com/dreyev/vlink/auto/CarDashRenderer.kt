@@ -100,9 +100,11 @@ class CarDashRenderer {
         val speedKmh = s.speedKmh?.value ?: s.gps?.value?.speedKmh
         val speedTxt = speedKmh?.let { u.fmtSpeed(it) } ?: "N/A"
         if (s.isEv) {
-            val kw = s.hvPowerKw?.value
-            val sub = listOfNotNull(kw?.let { "%.0f kW".format(Locale.US, it) }, s.socPct?.value?.let { "SOC %.0f%%".format(Locale.US, it) }).joinToString(" · ")
-            gauge(c, 600f, 300f, 215f, kw, -100.0, 250.0, 7, null, if ((kw ?: 0.0) < 0) K.green else K.obd, speedTxt, u.speedUnit, sub.ifEmpty { "Power N/A" }, "SPEED · POWER kW", s.speedKmh?.source, origin = 0.0)
+            // Speed and power side by side; power has rear/front motor bands inside.
+            val maxSpeed = if (u.speedUnit == "mph") 120.0 else 200.0
+            gauge(c, 435f, 290f, 150f, speedKmh?.let { u.speed(it) }, 0.0, maxSpeed, 6, null, K.obd, speedTxt, u.speedUnit,
+                s.gps?.value?.speedKmh?.let { "GPS " + u.fmtSpeed(it, 1) } ?: "", "SPEED", s.speedKmh?.source)
+            powerGauge(c, 770f, 290f, 150f, s)
         } else {
             val rpm = s.rpm?.value
             gauge(c, 600f, 300f, 215f, rpm?.div(1000), 0.0, 8.0, 8, 6.5, K.obd, speedTxt, u.speedUnit,
@@ -292,6 +294,55 @@ class CarDashRenderer {
         text(c, title, cx, cy + r + 14f, 16f, K.dim, bold, Paint.Align.CENTER)
         val b = source?.name ?: "N/A"
         badge(c, b, cx - (measure(b, 13f, bold) + 14f) / 2, cy + r + 24f, K.src(source))
+    }
+
+    private fun powerColor(kw: Double?) = when { kw == null -> K.faint; kw < -0.5 -> K.green; kw > 0.5 -> K.obd; else -> K.muted }
+
+    private fun powerGauge(c: Canvas, cx: Float, cy: Float, r: Float, s: VehicleState) {
+        val now = System.currentTimeMillis()
+        val total = s.hvPowerKw?.value
+        val rear = s.rearMotorKw?.takeIf { it.isFresh(now, 3_000) }?.value
+        val front = s.frontMotorKwEst(now)?.value
+        val min = -100.0; val max = 250.0
+        fun fr(v: Double) = ((v - min) / (max - min)).coerceIn(0.0, 1.0).toFloat()
+        val start = 135f; val sweep = 270f; val f0 = fr(0.0)
+        fun band(rr: Float, w: Float, v: Double?) {
+            stroke.strokeWidth = w; stroke.color = K.track; stroke.strokeCap = Paint.Cap.ROUND
+            c.drawArc(arcRect(cx, cy, rr), start, sweep, false, stroke)
+            if (v == null) return
+            val f = fr(v)
+            if (abs(f - f0) < 0.004f) return
+            stroke.color = powerColor(v); stroke.strokeCap = Paint.Cap.BUTT
+            c.drawArc(arcRect(cx, cy, rr), start + sweep * min(f, f0), sweep * abs(f - f0), false, stroke)
+            stroke.strokeCap = Paint.Cap.ROUND
+        }
+        band(r * 0.82f, r * 0.13f, total)
+        band(r * 0.64f, r * 0.07f, rear)
+        band(r * 0.53f, r * 0.07f, front)
+        text(c, "R", cx + (r * 0.64f * cos(Math.toRadians(125.0))).toFloat(), cy + (r * 0.64f * sin(Math.toRadians(125.0))).toFloat() + 5f, 14f, K.muted, bold, Paint.Align.CENTER)
+        text(c, "F", cx + (r * 0.53f * cos(Math.toRadians(125.0))).toFloat(), cy + (r * 0.53f * sin(Math.toRadians(125.0))).toFloat() + 5f, 14f, K.muted, bold, Paint.Align.CENTER)
+        // ticks every 50 kW outside the main arc; longer at 0
+        var kw = min
+        while (kw <= max + 0.1) {
+            val a = Math.toRadians((start + sweep * fr(kw)).toDouble())
+            val zero = abs(kw) < 0.1
+            stroke.color = if (zero) K.text else K.tick; stroke.strokeWidth = if (zero) 3.5f else 2.5f
+            val r1 = r * 0.92f; val r2 = if (zero) r * 1.02f else r * 0.98f
+            c.drawLine(cx + (r1 * cos(a)).toFloat(), cy + (r1 * sin(a)).toFloat(), cx + (r2 * cos(a)).toFloat(), cy + (r2 * sin(a)).toFloat(), stroke)
+            kw += 50.0
+        }
+        if (total != null) {
+            val a = Math.toRadians((start + sweep * fr(total)).toDouble())
+            stroke.color = Color.WHITE; stroke.strokeWidth = 5f
+            c.drawLine(cx + (r * 0.72f * cos(a)).toFloat(), cy + (r * 0.72f * sin(a)).toFloat(), cx + (r * 0.92f * cos(a)).toFloat(), cy + (r * 0.92f * sin(a)).toFloat(), stroke)
+        }
+        val state = when { total == null -> "N/A"; total < -0.5 -> "REGEN"; total > 0.5 -> "TRACTION"; else -> "COASTING" }
+        text(c, total?.let { "%.0f".format(Locale.US, it) } ?: "N/A", cx, cy + r * 0.1f, r * 0.36f, if (total == null) K.faint else K.text, bold, Paint.Align.CENTER)
+        text(c, "kW", cx, cy + r * 0.27f, r * 0.11f, K.muted, regular, Paint.Align.CENTER)
+        text(c, state, cx, cy + r * 0.44f, r * 0.1f, powerColor(total), bold, Paint.Align.CENTER)
+        text(c, "POWER", cx, cy + r + 14f, 16f, K.dim, bold, Paint.Align.CENTER)
+        fun kwTxt(v: Double?) = v?.let { "%.0f kW".format(Locale.US, it) } ?: "N/A"
+        text(c, "Rear ${kwTxt(rear)} · Front ${kwTxt(front)}" + if (front != null) " est" else "", cx, cy + r + 38f, 15f, K.muted, regular, Paint.Align.CENTER)
     }
 
     private fun smallGauge(c: Canvas, cx: Float, cy: Float, r: Float, v: Double?, min: Double, max: Double, color: Int, title: String, unit: String, src: Source?) {
