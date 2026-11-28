@@ -17,6 +17,7 @@ import com.dreyev.vlink.ui.C
 import com.dreyev.vlink.ui.DriveLandscape
 import com.dreyev.vlink.ui.DriveScreen
 import com.dreyev.vlink.ui.EnginePill
+import com.dreyev.vlink.ui.MapScreen
 import com.dreyev.vlink.ui.ScreenHeader
 import com.dreyev.vlink.ui.Tab
 import com.dreyev.vlink.ui.ThemeMode
@@ -91,6 +92,7 @@ class StoreScreenshotTest {
                             Tab.DRIVE -> DriveScreen(s, UnitPrefs(), now)
                             Tab.TIRES -> TiresScreen(s, UnitPrefs(), now)
                             Tab.VEHICLE -> VehicleScreen(s, UnitPrefs(), TestStates.trail)
+                            Tab.MAP -> MapScreen(s, UnitPrefs(), TestStates.trail) {}
                         }
                     }
                     BottomTabs(Tab.entries, tab) {}

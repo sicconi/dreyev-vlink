@@ -30,6 +30,15 @@ android {
         // Bump versionCode by 1 for every upload to Play; versionName is what users see.
         versionCode = 1
         versionName = "1.0.0"
+
+        // Google Maps key: put MAPS_API_KEY=... in local.properties (gitignored) or the
+        // MAPS_API_KEY environment variable. Never commit it. Without a key the app falls
+        // back to the offline breadcrumb trail.
+        val mapsKey = (rootProject.file("local.properties").takeIf { it.exists() }
+            ?.readLines()?.firstOrNull { it.startsWith("MAPS_API_KEY=") }?.substringAfter("=")?.trim()
+            ?: System.getenv("MAPS_API_KEY") ?: "").trim()
+        manifestPlaceholders["MAPS_API_KEY"] = mapsKey
+        buildConfigField("boolean", "HAS_MAPS_KEY", if (mapsKey.isNotEmpty()) "true" else "false")
     }
 
     signingConfigs {
@@ -71,7 +80,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
 }
 
 dependencies {
@@ -83,6 +92,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-service:2.8.7")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     "sideloadImplementation"("androidx.car.app:app:1.7.0")
+    // Google Maps (phone map tab, GPS card and Android Auto map page)
+    implementation("com.google.android.gms:play-services-maps:19.2.0")
+    implementation("com.google.maps.android:maps-compose:6.4.1")
 
     implementation(platform("androidx.compose:compose-bom:2024.12.01"))
     implementation("androidx.compose.ui:ui")

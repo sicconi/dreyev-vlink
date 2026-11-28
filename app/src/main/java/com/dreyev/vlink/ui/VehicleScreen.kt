@@ -119,8 +119,8 @@ fun GpsCard(s: VehicleState, u: UnitPrefs, trail: List<Pair<Double, Double>>) {
             Badge(if (g == null) "PHONE · no fix" else detail, if (g == null) C.textFaint else C.phone, false)
         }
         Box(Modifier.fillMaxWidth().height(128.dp).clip(RoundedCornerShape(12.dp)).background(C.cardInner).border(1.dp, C.border, RoundedCornerShape(12.dp))) {
-            TrailView(trail, Modifier.fillMaxWidth().height(128.dp))
-            Text(if (g == null) "Waiting for GPS fix…" else "Your track (last ~2.5 min)", Modifier.align(Alignment.BottomStart).padding(10.dp), color = C.textFaint, fontSize = 10.sp)
+            TraceMap(trail, null, Modifier.fillMaxWidth().height(128.dp), zoom = 15f, interactive = false)
+            Text(if (g == null) "Waiting for GPS fix…" else "Your track · full map in the Map tab", Modifier.align(Alignment.BottomStart).padding(10.dp), color = C.textFaint, fontSize = 10.sp)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Compass(g?.headingDeg)

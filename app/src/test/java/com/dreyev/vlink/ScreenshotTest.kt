@@ -34,6 +34,7 @@ import com.dreyev.vlink.ui.ThemeMode
 import com.dreyev.vlink.ui.TiresLandscape
 import com.dreyev.vlink.ui.TiresScreen
 import com.dreyev.vlink.ui.VLinkTheme
+import com.dreyev.vlink.ui.MapScreen
 import com.dreyev.vlink.ui.VehicleScreen
 import com.dreyev.vlink.ui.linkSubtitle
 import com.dreyev.vlink.ui.linkTitle
@@ -62,6 +63,7 @@ class ScreenshotTest {
                             Tab.DRIVE -> DriveScreen(s, u, now)
                             Tab.TIRES -> TiresScreen(s, u, now)
                             Tab.VEHICLE -> VehicleScreen(s, u, TestStates.trail)
+                            Tab.MAP -> MapScreen(s, u, TestStates.trail) {}
                         }
                     }
                     BottomTabs(Tab.entries, tab) {}
@@ -73,6 +75,7 @@ class ScreenshotTest {
     @Test fun drivePortrait() = portrait(Tab.DRIVE)
     @Test fun tiresPortrait() = portrait(Tab.TIRES)
     @Test fun vehiclePortrait() = portrait(Tab.VEHICLE)
+    @Test fun mapPortrait() = portrait(Tab.MAP)
     @Test fun driveLight() = portrait(Tab.DRIVE, theme = ThemeMode.LIGHT)
     @Test fun tiresLight() = portrait(Tab.TIRES, theme = ThemeMode.LIGHT)
     @Test fun vehicleLight() = portrait(Tab.VEHICLE, theme = ThemeMode.LIGHT)

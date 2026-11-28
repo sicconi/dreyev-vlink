@@ -34,7 +34,7 @@ import com.dreyev.vlink.obd.EngineState
 import com.dreyev.vlink.obd.LinkState
 import com.dreyev.vlink.obd.VehicleState
 
-enum class Tab(val title: String) { DRIVE("Drive"), TIRES("Tires & chassis"), VEHICLE("Vehicle & GPS") }
+enum class Tab(val title: String) { DRIVE("Drive"), TIRES("Tires & chassis"), VEHICLE("Vehicle & GPS"), MAP("Map") }
 
 fun linkTitle(s: VehicleState): Pair<String, Color> = when (s.link.state) {
     LinkState.CONNECTED -> (if (s.link.simulated) "Demo mode" else "VLink connected") to C.green
@@ -134,6 +134,15 @@ fun TabIcon(tab: Tab, color: Color) {
                         cubicTo(15.3f, 4f, 18f, 6.7f, 18f, 10f); cubicTo(18f, 15.5f, 12f, 21f, 12f, 21f)
                     }
                     drawPath(p, color, style = st); drawCircle(color, 2.2f, Offset(12f, 10f), style = st)
+                }
+                Tab.MAP -> {
+                    // folded map
+                    val p = Path().apply {
+                        moveTo(3f, 6f); lineTo(9f, 4f); lineTo(15f, 6f); lineTo(21f, 4f); lineTo(21f, 18f)
+                        lineTo(15f, 20f); lineTo(9f, 18f); lineTo(3f, 20f); close()
+                    }
+                    drawPath(p, color, style = st)
+                    drawLine(color, Offset(9f, 4f), Offset(9f, 18f), 1.8f); drawLine(color, Offset(15f, 6f), Offset(15f, 20f), 1.8f)
                 }
             }
         }

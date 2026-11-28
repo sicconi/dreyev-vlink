@@ -43,6 +43,7 @@ import com.dreyev.vlink.ui.DriveScreen
 import com.dreyev.vlink.ui.EnginePill
 import com.dreyev.vlink.ui.LandscapeStatus
 import com.dreyev.vlink.ui.LogoChip
+import com.dreyev.vlink.ui.MapScreen
 import com.dreyev.vlink.ui.RecordButton
 import com.dreyev.vlink.ui.ScreenHeader
 import com.dreyev.vlink.ui.SettingsButton
@@ -121,8 +122,8 @@ private fun Dashboard(app: VLinkApp) {
     val trail = app.location.trail.toList()
 
     if (landscape) {
-        // Landscape: Drive and Tires, Vehicle info lives in the Drive bottom strip.
-        val tabs = listOf(Tab.DRIVE, Tab.TIRES)
+        // Landscape: Drive, Tires and Map; Vehicle info lives in the Drive bottom strip.
+        val tabs = listOf(Tab.DRIVE, Tab.TIRES, Tab.MAP)
         if (tab == Tab.VEHICLE) tab = Tab.DRIVE
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -135,7 +136,8 @@ private fun Dashboard(app: VLinkApp) {
                 TopTabs(tabs, tab) { tab = it }
                 SettingsButton { showSettings = true }
             }
-            Box(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) {
+            if (tab == Tab.MAP) Box(Modifier.fillMaxWidth().weight(1f)) { MapScreen(s, u, trail) { app.location.clearTrail() } }
+            else Box(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) {
                 if (tab == Tab.DRIVE) DriveLandscape(s, u) else TiresLandscape(s, u, now)
             }
         }
@@ -149,12 +151,15 @@ private fun Dashboard(app: VLinkApp) {
                     listOfNotNull(s.link.protocol, s.batteryV?.value?.let { "%.1f V".format(it) }, if (s.link.simulated) "simulated" else null).joinToString(" · ").ifEmpty { linkSubtitle(s) },
                     dot, { showSettings = true },
                 ) { RecordButton(recording != null) { app.trips.toggle() } }
+                Tab.MAP -> ScreenHeader("Map", s.gps?.value?.let { "GPS ±${it.accuracyM?.toInt() ?: "?"} m · ${it.satellites ?: "?"} sats" } ?: "Waiting for GPS fix", dot, { showSettings = true }) { EnginePill(s) }
             }
-            Box(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) {
+            if (tab == Tab.MAP) Box(Modifier.fillMaxWidth().weight(1f)) { MapScreen(s, u, trail) { app.location.clearTrail() } }
+            else Box(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) {
                 when (tab) {
                     Tab.DRIVE -> DriveScreen(s, u, now)
                     Tab.TIRES -> TiresScreen(s, u, now)
                     Tab.VEHICLE -> VehicleScreen(s, u, trail)
+                    Tab.MAP -> Unit
                 }
             }
             BottomTabs(Tab.entries, tab) { tab = it }
