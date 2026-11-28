@@ -62,9 +62,15 @@ fun SettingsScreen(app: VLinkApp, onBack: () -> Unit) {
         if (uri != null) importMsg = app.profiles.import(uri).fold({ "Imported “${it.name}”" }, { "Could not import: ${it.message}" })
     }
 
+    var showFinder by remember { mutableStateOf(false) }
+
     DisposableEffect(Unit) {
         app.scanner.refreshBonded()
         onDispose { app.scanner.stopBleScan() }
+    }
+    if (showFinder) {
+        SignalFinderScreen(app) { showFinder = false }
+        return
     }
 
     Column(Modifier.fillMaxSize().background(C.bg)) {
@@ -99,6 +105,17 @@ fun SettingsScreen(app: VLinkApp, onBack: () -> Unit) {
                         if (scanning) app.scanner.stopBleScan() else app.scanner.startBleScan()
                     }
                     ActionButton("Demo mode", C.phone) { app.startDemo(); onBack() }
+                }
+            }
+
+            // ---- Appearance ----
+            DashCard(Modifier.fillMaxWidth()) {
+                SectionLabel("Appearance")
+                Text("Theme", color = C.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text("System follows your phone's dark mode setting. Saved across restarts.", color = C.textFaint, fontSize = 11.sp)
+                val modes = ThemeMode.entries
+                Segmented(modes.map { m -> (when (m) { ThemeMode.SYSTEM -> "System"; ThemeMode.DARK -> "Dark"; ThemeMode.LIGHT -> "Light" }) to (settings.theme == m) }) { i ->
+                    scope.launch { app.settingsRepo.setTheme(modes[i]) }
                 }
             }
 
@@ -139,6 +156,16 @@ fun SettingsScreen(app: VLinkApp, onBack: () -> Unit) {
                 ActionButton("Import profile (.json)", C.mfr) { importer.launch(arrayOf("application/json", "text/plain", "*/*")) }
                 importMsg?.let { Text(it, color = C.textDim, fontSize = 11.sp) }
                 Text("Active now: ${state.profileName ?: "none"}. Changes apply on the next connection.", color = C.textFaint, fontSize = 11.sp)
+            }
+
+            // ---- Signal finder ----
+            DashCard(Modifier.fillMaxWidth()) {
+                SectionLabel("Signal finder (experimental)")
+                Text(
+                    "Shows why a gauge reads N/A, scans your car for more data, and logs it while you use the turn signals, belts and brake. Share the log so new signals can be added.",
+                    color = C.textFaint, fontSize = 11.sp,
+                )
+                ActionButton("Open signal finder", C.mfr) { showFinder = true }
             }
 
             // ---- Phone mount ----

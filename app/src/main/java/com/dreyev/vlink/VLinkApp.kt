@@ -12,7 +12,10 @@ import com.dreyev.vlink.data.AppSettings
 import com.dreyev.vlink.data.ProfileRepository
 import com.dreyev.vlink.data.SavedDevice
 import com.dreyev.vlink.data.SettingsRepository
+import com.dreyev.vlink.obd.CarIdentity
+import com.dreyev.vlink.obd.ManufacturerProfile
 import com.dreyev.vlink.obd.ObdConnection
+import com.dreyev.vlink.obd.ObdTransport
 import com.dreyev.vlink.obd.SimulatedElm327
 import com.dreyev.vlink.obd.VehicleStore
 import com.dreyev.vlink.sensors.MountCalibration
@@ -42,6 +45,7 @@ class VLinkApp : Application() {
     lateinit var location: PhoneLocation; private set
     lateinit var motion: PhoneMotion; private set
     lateinit var trips: com.dreyev.vlink.data.TripRecorder; private set
+    lateinit var finder: com.dreyev.vlink.diag.SignalFinder; private set
     private lateinit var connection: ObdConnection
     private var simulated = false
 
@@ -54,6 +58,7 @@ class VLinkApp : Application() {
         location = PhoneLocation(this, store)
         motion = PhoneMotion(this, store)
         trips = com.dreyev.vlink.data.TripRecorder(this, store, scope)
+        finder = com.dreyev.vlink.diag.SignalFinder(this)
         motion.onCalibrated = { c -> scope.launch { settingsRepo.setMountCalibration(c.encode()) } }
         scope.launch {
             settings.collect { motion.calibration = MountCalibration.decode(it.mountCalibration) }
@@ -71,11 +76,31 @@ class VLinkApp : Application() {
         motion.start()
     }
 
+    /** A new transport for [device], or null if Bluetooth can't find it. */
+    fun transportFor(device: SavedDevice): (() -> ObdTransport)? {
+        val bt = scanner.device(device.address) ?: return null
+        return { if (device.kind == LinkKind.BLE) BleTransport(this, bt) else SppTransport(bt) }
+    }
+
+    val isSimulated get() = simulated
+
+    /** Profile for the car currently connected (or last seen). */
+    fun currentProfile(): ManufacturerProfile {
+        val s = store.state.value
+        return profiles.resolve(settings.value.profileId, CarIdentity(s.vin?.value, s.isEv), simulated)
+    }
+
+    /** Hand the adapter to the signal finder: stop live polling but keep the service running. */
+    fun pauseLink() = connection.stop()
+
+    /** Give the adapter back to the dashboard after the signal finder. */
+    fun resumeLink() { if (simulated) startDemo() else autoConnect() }
+
     fun connect(device: SavedDevice) {
-        val bt = scanner.device(device.address) ?: return
+        val factory = transportFor(device) ?: return
         simulated = false
         scope.launch { settingsRepo.setDevice(device) }
-        connection.start({ if (device.kind == LinkKind.BLE) BleTransport(this, bt) else SppTransport(bt) })
+        connection.start(factory)
         try {
             ContextCompat.startForegroundService(this, Intent(this, ObdService::class.java))
         } catch (e: IllegalStateException) {

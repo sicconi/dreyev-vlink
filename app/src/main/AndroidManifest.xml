@@ -54,6 +54,17 @@
             android:exported="false"
             android:foregroundServiceType="connectedDevice|location" />
 
+        <!-- Lets the signal finder share its CSV logs (and trip logs) with other apps. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <!-- Android Auto. Sideloaded builds need Android Auto developer mode + "Unknown sources". -->
         <meta-data
             android:name="com.google.android.gms.car.application"

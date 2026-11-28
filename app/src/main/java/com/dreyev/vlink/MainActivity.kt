@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import com.dreyev.vlink.obd.LinkState
 import com.dreyev.vlink.ui.BottomTabs
 import com.dreyev.vlink.ui.C
@@ -77,8 +78,16 @@ class MainActivity : ComponentActivity() {
         permissions.launch(needed.toTypedArray())
 
         setContent {
-            VLinkTheme {
-                val settings by app.settings.collectAsState()
+            val settings by app.settings.collectAsState()
+            VLinkTheme(settings.theme) {
+                val dark = C.isDark
+                LaunchedEffect(dark) {
+                    // Dark status/nav bar icons on the light theme, light icons on the dark one.
+                    WindowCompat.getInsetsController(window, window.decorView).apply {
+                        isAppearanceLightStatusBars = !dark
+                        isAppearanceLightNavigationBars = !dark
+                    }
+                }
                 LaunchedEffect(settings.keepScreenOn) {
                     if (settings.keepScreenOn) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                     else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -88,7 +97,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** Reconnect to the last adapter used, once settings have loaded. */}
+}
 
 @Composable
 private fun Dashboard(app: VLinkApp) {

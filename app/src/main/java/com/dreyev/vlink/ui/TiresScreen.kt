@@ -73,7 +73,7 @@ fun TireCard(c: Corner, t: TireState?, u: UnitPrefs, now: Long, compact: Boolean
             Text(if (compact) "${u.tirePressureUnit} · ${u.fmtTemp(t?.tempC?.value)}" else u.tirePressureUnit, color = C.textMuted, fontSize = 11.sp, modifier = Modifier.padding(bottom = 3.dp))
             if (low) {
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
-                    Text("LOW", Modifier.clip(RoundedCornerShape(4.dp)).background(C.mfr).padding(horizontal = 6.dp, vertical = 2.dp), color = androidx.compose.ui.graphics.Color(0xFF1A1206), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Text("LOW", Modifier.clip(RoundedCornerShape(4.dp)).background(C.mfr).padding(horizontal = 6.dp, vertical = 2.dp), color = C.onAmber, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -109,12 +109,12 @@ fun CarTopView(s: VehicleState, modifier: Modifier, height: Dp) {
             val dx = ox / k
             drawRoundRect(C.card, Offset(6f + dx, 10f), Size(48f, 280f), CornerRadius(22f))
             drawRoundRect(C.wheel, Offset(6f + dx, 10f), Size(48f, 280f), CornerRadius(22f), style = Stroke(1.5f))
-            drawRoundRect(androidx.compose.ui.graphics.Color(0xFF1F2A35), Offset(12f + dx, 70f), Size(36f, 46f), CornerRadius(8f))
-            drawRoundRect(androidx.compose.ui.graphics.Color(0xFF1F2A35), Offset(12f + dx, 200f), Size(36f, 34f), CornerRadius(8f))
+            drawRoundRect(C.carBody, Offset(12f + dx, 70f), Size(36f, 46f), CornerRadius(8f))
+            drawRoundRect(C.carBody, Offset(12f + dx, 200f), Size(36f, 34f), CornerRadius(8f))
             drawLine(C.tick, Offset(30f + dx, 22f), Offset(30f + dx, 40f), 2f, StrokeCap.Round)
             drawLine(C.tick, Offset(24f + dx, 30f), Offset(30f + dx, 22f), 2f, StrokeCap.Round)
             drawLine(C.tick, Offset(36f + dx, 30f), Offset(30f + dx, 22f), 2f, StrokeCap.Round)
-            fun tire(x: Float, y: Float, c: Corner) = drawRoundRect(if (low[c] == true) C.mfr else androidx.compose.ui.graphics.Color(0xFF4A5663), Offset(x + dx, y), Size(7f, 40f), CornerRadius(3f))
+            fun tire(x: Float, y: Float, c: Corner) = drawRoundRect(if (low[c] == true) C.mfr else C.tireIdle, Offset(x + dx, y), Size(7f, 40f), CornerRadius(3f))
             tire(0f, 44f, Corner.FL); tire(53f, 44f, Corner.FR); tire(0f, 216f, Corner.RL); tire(53f, 216f, Corner.RR)
         }
     }

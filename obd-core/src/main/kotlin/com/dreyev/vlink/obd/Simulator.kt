@@ -103,6 +103,7 @@ class SimulatedElm327(
         if (header == "7DF" && cmd == "0902") {
             return "014\r0:490201314847\r1:434D3832363333\r2:41303034333532"
         }
+        if (cmd == "3E00" && (header == "7E0" || header == "7B0" || header == "750")) return "7E00"
         if (mode == "22" && (header == "7E0" || header == "7B0" || header == "750")) {
             val ws = { k: Double -> "62$pid" + hx(*u16((s.speedKmh * k * 100).roundToInt())) }
             return when (pid) {

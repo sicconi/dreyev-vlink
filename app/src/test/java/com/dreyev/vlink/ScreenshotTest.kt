@@ -32,6 +32,7 @@ import com.dreyev.vlink.ui.DriveScreen
 import com.dreyev.vlink.ui.EnginePill
 import com.dreyev.vlink.ui.ScreenHeader
 import com.dreyev.vlink.ui.Tab
+import com.dreyev.vlink.ui.ThemeMode
 import com.dreyev.vlink.ui.TiresLandscape
 import com.dreyev.vlink.ui.TiresScreen
 import com.dreyev.vlink.ui.VLinkTheme
@@ -70,11 +71,11 @@ class ScreenshotTest {
 
     private val trail = (0 until 60).map { i -> (25.76171 - (60 - i) * 0.00001) to (-80.19180 - (60 - i) * 0.00002) }
 
-    private fun portrait(tab: Tab, u: UnitPrefs = UnitPrefs()) {
+    private fun portrait(tab: Tab, u: UnitPrefs = UnitPrefs(), theme: ThemeMode = ThemeMode.DARK) {
         val s = simulatedState()
         val now = System.currentTimeMillis()
         paparazzi.snapshot {
-            VLinkTheme {
+            VLinkTheme(theme) {
                 Column(Modifier.fillMaxSize().background(C.bg)) {
                     val (title, dot) = linkTitle(s)
                     ScreenHeader(if (tab == Tab.DRIVE) title else tab.title, linkSubtitle(s), dot, {}) { EnginePill(s) }
@@ -94,6 +95,9 @@ class ScreenshotTest {
     @Test fun drivePortrait() = portrait(Tab.DRIVE)
     @Test fun tiresPortrait() = portrait(Tab.TIRES)
     @Test fun vehiclePortrait() = portrait(Tab.VEHICLE)
+    @Test fun driveLight() = portrait(Tab.DRIVE, theme = ThemeMode.LIGHT)
+    @Test fun tiresLight() = portrait(Tab.TIRES, theme = ThemeMode.LIGHT)
+    @Test fun vehicleLight() = portrait(Tab.VEHICLE, theme = ThemeMode.LIGHT)
     @Test fun driveMetric() = portrait(Tab.DRIVE, UnitPrefs(UnitSystem.METRIC, TempUnit.C))
 
     private fun ev(s: VehicleState): VehicleState {

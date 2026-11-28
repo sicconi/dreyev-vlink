@@ -1,7 +1,7 @@
 {
   "id": "hyundai-ioniq5",
   "name": "Hyundai Ioniq 5 (2022–2024, E-GMP)",
-  "notes": "Community-published PIDs (Esprit1st/Hyundai-Ioniq-5-Torque-Pro-PIDs, based on JejuSoul/OBD-PIDs-for-HKMC-EVs). Not verified by dreyev on a car yet. Brake pressure, wheel speeds, turn signals and seatbelts are not in the published list.",
+  "notes": "Community-published PIDs: OBDb/Hyundai-IONIQ-5 (CC BY-SA 4.0, decoded from 2022-2024 car captures), Esprit1st/Hyundai-Ioniq-5-Torque-Pro-PIDs and meatpiHQ/wican-fw. Turn signals, seat belts and brake line pressure are not in any public list; use Settings > Signal finder to look for them.",
   "powertrain": "ev",
   "wmi": ["KM8KM", "KM8KN", "KM8KR", "KM8KS"],
   "brakes": { "frontPistonAreaCm2": 25.5, "rearPistonAreaCm2": 11.3 },
@@ -16,13 +16,23 @@
     { "signal": "tireTempRR",     "header": "7A0", "request": "22C00B", "formula": "U-50", "unit": "C",   "intervalMs": 5000 },
 
     { "signal": "steeringAngle",  "header": "730", "request": "22F010", "formula": "signed(N*256+M,16)/10", "unit": "deg", "intervalMs": 150 },
+    { "signal": "wheelSpeedFR",   "header": "730", "request": "22F010", "formula": "(F*256+E)/32", "unit": "km/h", "intervalMs": 150 },
+    { "signal": "wheelSpeedFL",   "header": "730", "request": "22F010", "formula": "(H*256+G)/32", "unit": "km/h", "intervalMs": 150 },
+    { "signal": "wheelSpeedRR",   "header": "730", "request": "22F010", "formula": "(J*256+I)/32", "unit": "km/h", "intervalMs": 150 },
+    { "signal": "wheelSpeedRL",   "header": "730", "request": "22F010", "formula": "(L*256+K)/32", "unit": "km/h", "intervalMs": 150 },
+    { "signal": "accelLat",       "header": "730", "request": "22F010", "formula": "(P*256+O)*8.354/65535-4.177", "unit": "m/s2", "intervalMs": 150 },
+    { "signal": "accelLong",      "header": "730", "request": "22F010", "formula": "(R*256+Q)*8.354/65535-4.177", "unit": "m/s2", "intervalMs": 150 },
+
+    { "signal": "brakePedal",     "header": "7A0", "request": "22B008", "formula": "bit(G,4)", "intervalMs": 300 },
+
+    { "signal": "accelPedal",     "header": "7E2", "request": "22E004", "formula": "(J*256+I)/512", "unit": "%", "intervalMs": 200 },
 
     { "signal": "vehicleSpeed",   "header": "7B3", "request": "220100", "formula": "AD",      "unit": "km/h", "intervalMs": 200 },
     { "signal": "ambientTemp",    "header": "7B3", "request": "220100", "formula": "G/2-40",  "unit": "C",    "intervalMs": 200 },
 
-    { "signal": "odometer",       "header": "7C6", "request": "22B002", "formula": "G*65536+H*256+I", "unit": "km", "intervalMs": 60000 },
+    { "signal": "odometer",       "header": "7C6", "request": "22B002", "formula": "max(G*65536+H*256+I, (J*65536+K*256+L)*1.609344)", "unit": "km", "intervalMs": 30000 },
 
-    { "signal": "ready",          "header": "7E4", "request": "220101", "formula": "bit(AY,2)", "intervalMs": 400 },
+    { "signal": "ready",          "header": "7E4", "request": "220101", "formula": "min(1, max(0, AZ*256+BA-100))", "intervalMs": 400 },
     { "signal": "batteryCurrent", "header": "7E4", "request": "220101", "formula": "signed(K*256+L,16)/10", "unit": "A", "intervalMs": 400 },
     { "signal": "batteryVoltage", "header": "7E4", "request": "220101", "formula": "(M*256+N)/10", "unit": "V", "intervalMs": 400 },
     { "signal": "motorRpmRear",   "header": "7E4", "request": "220101", "formula": "signed(BB*256+BC,16)", "unit": "rpm", "intervalMs": 400 },
